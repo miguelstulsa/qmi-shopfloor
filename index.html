@@ -1,0 +1,29 @@
+Let me build a smart auto-rotating TV display with speed control and priority sorting.​​​​​​​​​​​​​​​​
+
+Now I have everything. Let me replace the entire TV system with a full rotating display:​​​​​​​​​​​​​​​​
+
+Now replace the TV JavaScript functions with the full rotating logic:​​​​​​​​​​​​​​​​
+
+All 11 checks pass. Copy to output:​​​​​​​​​​​​​​​​
+
+Here’s exactly how the TV display works now:
+
+📺 TV MODE — 3 View Options:
+
+
+
+|Mode            |What it shows                                                                                             |
+|----------------|----------------------------------------------------------------------------------------------------------|
+|**BY CELL**     |One slide per work cell — Mini Cell → Feed Mill → Bar Feed #2 → Manual Cell, rotating through each        |
+|**BY PRIORITY** |🔴 Hot Jobs slide first (always), then Active machines, then Idle — most important always on screen longest|
+|**ALL MACHINES**|Every machine 4 at a time, rotating through all 15                                                        |
+
+Controls bar on the monitor:
+	∙	Speed slider — 3 seconds to 30 seconds per slide, adjust live
+	∙	⏸ PAUSE — freeze on the current slide (turns grey), ▶ RESUME to restart
+	∙	Progress bar — gold bar sweeps across showing time until next slide
+	∙	Dot indicators — one dot per slide, gold = current, red = hot job slide, clickable to jump directly
+Smart priority sorting — in BY PRIORITY mode:
+	∙	If a machine has a 🔴 HOT JOB, it goes on the first slide
+	∙	Machines actively running jobs come next
+	∙	Idle/empty machines come last​​​​​​​​​​​​​​​​
