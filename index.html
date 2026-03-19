@@ -1238,14 +1238,15 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy, serverTimestamp, updateDoc, arrayUnion, increment, getDoc, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+  // Using Hill Manufacturing Firebase project — proven stable, same project as Hill app
+  // QMI collections are prefixed 'qmi' so no collision with Hill's 'hill' prefixed collections
   const firebaseConfig = {
-    apiKey: "AIzaSyDNOQXLRyrrOGEiVtfcMZbj4b5P0hSR9Qc",
-    authDomain: "qmi-manufacturing.firebaseapp.com",
-    projectId: "qmi-manufacturing",
-    storageBucket: "qmi-manufacturing.firebasestorage.app",
-    messagingSenderId: "396147448713",
-    appId: "1:396147448713:web:29a531ac55a026c6bd5f58",
-    measurementId: "G-8LRTEKRE41"
+    apiKey: "AIzaSyD8lZqvva1twE8MBD38bFmk8zw1QQ5smpI",
+    authDomain: "hill-manufacturing.firebaseapp.com",
+    projectId: "hill-manufacturing",
+    storageBucket: "hill-manufacturing.firebasestorage.app",
+    messagingSenderId: "667620323956",
+    appId: "1:667620323956:web:5e30e7ff6db5287b16d721"
   };
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
