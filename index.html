@@ -522,7 +522,7 @@ header { background: linear-gradient(135deg, #001833 0%, #002a5c 100%); border-b
 /* TOP BAR */
 .sched-tv-header {
 background:linear-gradient(90deg,#001228 0%,#002050 50%,#001228 100%);
-padding:0 14px;
+padding:0 20px;
 height:56px;
 display:flex;
 align-items:center;
@@ -531,7 +531,7 @@ border-bottom:3px solid #f5c500;
 flex-shrink:0;
 position:relative;
 box-shadow:0 4px 30px rgba(0,0,0,0.6);
-gap:10px;
+gap:12px;
 }
 .sched-tv-header::after {
 content:’’;
@@ -563,8 +563,10 @@ align-items:center;
 gap:8px;
 border-bottom:1px solid rgba(26,74,140,0.5);
 flex-shrink:0;
-flex-wrap:wrap;
-row-gap:4px;
+flex-wrap:nowrap;
+overflow-x:auto;
+-webkit-overflow-scrolling:touch;
+scrollbar-width:none;
 }
 .sched-tv-ctrl-label { font-family:‘Bebas Neue’,sans-serif;font-size:12px;letter-spacing:2px;color:#475569; }
 .sched-tv-ctrl-btn { background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:#94a3b8;border-radius:6px;padding:5px 12px;font-family:‘Bebas Neue’,sans-serif;font-size:13px;letter-spacing:1px;cursor:pointer;transition:all 0.15s; }
@@ -2463,7 +2465,9 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     var switchBtn  = document.getElementById('shopSwitchBtn');
 
     if (mgmtTab)    mgmtTab.style.display    = isManagementRole ? '' : 'none';
-    if (schedTab)   schedTab.style.display   = isManagementRole ? '' : 'none';
+    // ALL logged-in employees can VIEW the Schedule tab
+    if (schedTab)   schedTab.style.display   = '';
+    // Only admin / plant_manager / manager can ADD or EDIT jobs
     if (schedAddBtn) schedAddBtn.style.display = isManagementRole ? '' : 'none';
 
     if (isAdmin || isPlantManager) {
@@ -3616,11 +3620,15 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     nameDiv.appendChild(nm); nameDiv.appendChild(cl);
     hdr.appendChild(nameDiv);
     if (!tvMode) {
-      var editBtn = document.createElement('button');
-      editBtn.className = 'sched-edit-btn';
-      editBtn.textContent = '✏️ Edit';
-      editBtn.onclick = function() { openSchedModal(key); };
-      hdr.appendChild(editBtn);
+      var _editRole = window._currentRole || 'machinist';
+      var _canEdit  = window._isAdmin || window._isPlantManager || ['admin','plant_manager','manager'].includes(_editRole);
+      if (_canEdit) {
+        var editBtn = document.createElement('button');
+        editBtn.className = 'sched-edit-btn';
+        editBtn.textContent = '✏️ Edit';
+        editBtn.onclick = function() { openSchedModal(key); };
+        hdr.appendChild(editBtn);
+      }
     }
     card.appendChild(hdr);
 
@@ -3930,7 +3938,7 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     TV.paused   = false;
     var tvEl = document.getElementById('schedTVMode');
     tvEl.classList.add('open');
-    // Force exact pixel height for Safari which ignores 100dvh in fixed overlays
+    // Force exact pixel height for Safari (ignores 100dvh on fixed overlays)
     tvEl.style.height = window.innerHeight + 'px';
     document.body.style.overflow = 'hidden';
     buildTVSlides();
