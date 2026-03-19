@@ -852,7 +852,7 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
 <div class="admin-section" style="border:1px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.05);">
   <div class="admin-section-title" style="color:#f87171;">⚠️ If Users Keep Disappearing</div>
   <div style="font-size:12px;color:#94a3b8;line-height:1.8;">
-    Go to <strong style="color:#f5c500;">console.firebase.google.com</strong> → QMI Manufacturing → Firestore Database → <strong style="color:#f5c500;">Rules</strong> tab → make sure it says:<br>
+    Go to <strong style="color:#f5c500;">console.firebase.google.com</strong> → Hill Manufacturing → Firestore Database → <strong style="color:#f5c500;">Rules</strong> tab → make sure it says:<br>
     <code style="background:rgba(0,0,0,0.4);padding:4px 8px;border-radius:4px;display:block;margin:6px 0;color:#4ade80;font-size:11px;">allow read, write: if true;</code>
     Then tap <strong style="color:#f5c500;">Publish</strong>.
   </div>
@@ -2675,6 +2675,7 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
             'style="background:#f5c500;border:none;color:#001833;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;">SAVE KEY</button>' +
             '</div>' +
           '<div style=\"display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;\">' + buildRoleBtns(u.id, userRole) + '</div>' +
+          '<button onclick=\"deleteUser(\'' + u.id + '\')\" style=\"margin-top:8px;width:100%;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171;border-radius:8px;padding:8px;font-family:Bebas Neue,sans-serif;font-size:13px;letter-spacing:1px;cursor:pointer;\">🗑 REMOVE USER</button>' +
           '</div>';
           rolesBox.appendChild(row);
         });
@@ -2721,20 +2722,16 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     }
   }
   async function deleteUser(id) {
-    // Find user name for confirmation
     var users = window._fbListenUsersCache || [];
     var u = users.find(function(x){ return x.id === id; });
     var uname = u ? (u.name || u.username) : 'this user';
-    var confirm1 = confirm('⚠️ Delete ' + uname + ' permanently?\n\nThis cannot be undone.');
-    if (!confirm1) return;
-    // Double confirm — type DELETE
-    var typed = prompt('Type DELETE to confirm removing ' + uname + ':');
-    if (!typed || typed.trim().toUpperCase() !== 'DELETE') {
-      showToast('red', 'Cancelled', 'User was not deleted.');
-      return;
+    if (!confirm('Delete ' + uname + ' permanently?')) return;
+    try {
+      await window.fbDeleteUser(id);
+      showToast('green', '🗑 Removed', uname + ' has been deleted.');
+    } catch(e) {
+      showToast('red', 'Delete failed', e.message || 'Check connection');
     }
-    await window.fbDeleteUser(id);
-    showToast('green', 'User removed', uname + ' has been deleted.');
   }
 
   window.addEventListener('load', function() {
