@@ -1470,7 +1470,13 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
   };
   window.fbSavePosition = async function(id, position) {
     await updateDoc(doc(db, 'qmiUsers', id), { position: position.trim() });
-    showToast('green', '✅ Position saved!', position.trim() || 'Position cleared.');
+    // Refresh cache
+    const d = await getDoc(doc(db, 'qmiUsers', id));
+    if (d.exists()) {
+      var cache = window._fbListenUsersCache || [];
+      var idx = cache.findIndex(function(u){ return u.id === id; });
+      if (idx > -1) { cache[idx] = { ...d.data(), id: id }; window._fbListenUsersCache = cache; }
+    }
   };
   window.fbDeleteUser = async function(id) { await deleteDoc(doc(db, 'qmiUsers', id)); };
 
@@ -1488,7 +1494,7 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
   window.fbSetRole = async function(userId, role) {
     await updateDoc(doc(db, 'qmiUsers', userId), {
       role: role,
-      isManager: role === 'manager'
+      isManager: ['manager','plant_manager','admin'].includes(role)
     });
   };
   window.checkManagerAccess = async function(username) {
@@ -2326,7 +2332,25 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     var uid = btn.dataset.uid;
     if (!uid) return;
     var inp = document.getElementById('pos-' + uid);
-    if (inp && window.fbSavePosition) window.fbSavePosition(uid, inp.value);
+    if (!inp) return;
+    var pos = inp.value.trim();
+    btn.textContent = '⏳';
+    btn.disabled = true;
+    if (window.fbSavePosition) {
+      window.fbSavePosition(uid, pos).then(function() {
+        btn.textContent = '✓ SAVED';
+        btn.style.background = '#22c55e';
+        setTimeout(function() {
+          btn.textContent = 'SAVE';
+          btn.style.background = '#f5c500';
+          btn.disabled = false;
+        }, 2000);
+      }).catch(function(err) {
+        btn.textContent = 'SAVE';
+        btn.disabled = false;
+        showToast('red', 'Save failed', err.message || 'Check connection');
+      });
+    }
   });
 
   function openAdminPanel() {
@@ -2459,12 +2483,7 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
             '<button onclick="window.fbSavePushoverKey(\'' + u.id + '\', document.getElementById(\'pkey-' + u.id + '\').value)" ' +
             'style="background:#f5c500;border:none;color:#001833;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;">SAVE KEY</button>' +
             '</div>' +
-            (userRole !== 'machinist'
-              ? '<button class="admin-role-btn" onclick="setUserRole(\'' + u.id + '\',\'machinist\',this)" style="background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.5);color:#4ade80;">🔧 Machinist</button>'
-              : '<button class="admin-role-btn" disabled style="background:rgba(34,197,94,0.3);border:1px solid #22c55e;color:#4ade80;opacity:0.6;cursor:default;">🔧 Current</button>') +
-            (userRole !== 'manager'
-              ? '<button class="admin-role-btn" onclick="setUserRole(\'' + u.id + '\',\'manager\',this)" style="background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.5);color:#60a5fa;">💼 Manager</button>'
-              : '<button class="admin-role-btn" disabled style="background:rgba(59,130,246,0.3);border:1px solid #3b82f6;color:#60a5fa;opacity:0.6;cursor:default;">💼 Current</button>') +
+          '<div style=\"display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;\">' + buildRoleBtns(u.id, userRole) + '</div>' +
           '</div>';
           rolesBox.appendChild(row);
         });
@@ -2869,13 +2888,36 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
 
   // ══════════════════════════════════════════════════
   // ── ROLE SETTER ──
+  // Build role assignment buttons — uses data attributes, no inline JS
+  function buildRoleBtns(uid, currentRole) {
+    var roles = [
+      {key:'plant_manager',      emoji:'🏭', label:'Plant Manager',        color:'#a855f7', bg:'rgba(168,85,247,0.15)', border:'rgba(168,85,247,0.5)'},
+      {key:'manager',            emoji:'💼', label:'Manager',              color:'#3b82f6', bg:'rgba(59,130,246,0.15)',  border:'rgba(59,130,246,0.5)'},
+      {key:'machinist',          emoji:'🔧', label:'Machinist',            color:'#22c55e', bg:'rgba(34,197,94,0.15)',   border:'rgba(34,197,94,0.5)'},
+      {key:'shipping_receiving', emoji:'📦', label:'Shipping & Receiving', color:'#06b6d4', bg:'rgba(6,182,212,0.15)',   border:'rgba(6,182,212,0.5)'},
+      {key:'quality_control',    emoji:'🔍', label:'Quality Control',      color:'#ec4899', bg:'rgba(236,72,153,0.15)',  border:'rgba(236,72,153,0.5)'},
+      {key:'saw_operator',       emoji:'⚙️', label:'Saw Operator',          color:'#f97316', bg:'rgba(249,115,22,0.15)', border:'rgba(249,115,22,0.5)'},
+      {key:'welder',             emoji:'🔥', label:'Welder',               color:'#eab308', bg:'rgba(234,179,8,0.15)',   border:'rgba(234,179,8,0.5)'},
+    ];
+    return roles.map(function(r) {
+      var isCurrent = currentRole === r.key;
+      return '<button class="admin-role-btn role-assign-btn"' +
+        ' data-uid="' + uid + '" data-role="' + r.key + '"' +
+        ' style="background:' + (isCurrent ? r.bg.replace('0.15','0.35') : r.bg) + ';' +
+        'border:1px solid ' + (isCurrent ? r.color : r.border) + ';' +
+        'color:' + r.color + ';' +
+        (isCurrent ? 'box-shadow:0 0 8px ' + r.color + '66;' : '') +
+        '">' + r.emoji + ' ' + r.label + (isCurrent ? ' ✓' : '') + '</button>';
+    }).join('');
+  }
+
   function setUserRole(userId, role, btnEl) {
     if (!userId) { showToast('red', 'Error: no user ID', ''); return; }
     if (btnEl) { btnEl.disabled = true; btnEl.textContent = '⏳'; }
 
     if (!window._db || !window._fbModules) {
       showToast('red', 'Firebase not ready', 'Wait 2 seconds and try again.');
-      if (btnEl) { btnEl.disabled = false; btnEl.textContent = role === 'manager' ? '💼 Manager' : '🔧 Machinist'; }
+      if (btnEl) { btnEl.disabled = false; }
       return;
     }
 
@@ -2886,8 +2928,10 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
       role: role,
       isManager: role === 'manager'
     }).then(function() {
-      showToast(role === 'manager' ? 'blue' : 'green',
-        role === 'manager' ? '💼 Manager assigned!' : '🔧 Set to Machinist', 'Saved ✓');
+      var roleLabels = {plant_manager:'🏭 Plant Manager',manager:'💼 Manager',machinist:'🔧 Machinist',
+        shipping_receiving:'📦 Shipping & Receiving',quality_control:'🔍 Quality Control',
+        saw_operator:'⚙️ Saw Operator',welder:'🔥 Welder'};
+      showToast('green', (roleLabels[role] || role) + ' assigned!', 'Role saved ✓');
       mods.getDocs(mods.collection(db, 'qmiUsers')).then(function(snap) {
         var users = [];
         snap.forEach(function(d) { var obj = d.data(); obj.id = d.id; users.push(obj); });
@@ -2903,10 +2947,23 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
         showToast('red', 'Save failed', msg.slice(0,80));
       }
       console.error('setUserRole error:', err);
-      if (btnEl) { btnEl.disabled = false; btnEl.textContent = role === 'manager' ? '💼 Manager' : '🔧 Machinist'; }
+      if (btnEl) { btnEl.disabled = false; }
     });
   }
   window.setUserRole = setUserRole;
+
+  // Role assignment via data attributes
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.role-assign-btn');
+    if (!btn) return;
+    var uid  = btn.dataset.uid;
+    var role = btn.dataset.role;
+    if (!uid || !role) return;
+    // Visual feedback immediately
+    btn.textContent = '⏳ Saving...';
+    btn.disabled = true;
+    setUserRole(uid, role, btn);
+  });
 
   // DISMISS FIX — event delegation for ✕ buttons
   // Works for sidebar (.notif-dismiss) AND requests page (.req-dismiss)
