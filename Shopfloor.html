@@ -2,8 +2,12 @@
 
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<!-- QMI v3.0 - NO PERF BARS -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QMI — Shop Floor</title>
+<title>QMI Shop Floor v3</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -1113,6 +1117,18 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
 <!-- FIREBASE MODULE -->
 
 <script type="module">
+  // ── KILL ANY CACHED PERF BARS ON LOAD ──
+  (function killPerfBars() {
+    // Remove any perf-bar elements left by old cached code
+    document.querySelectorAll('.perf-bar,[class*="perf-bar"]').forEach(function(el){ el.remove(); });
+    // Kill any running intervals from old cached scripts (IDs 1-200)
+    for (var i = 1; i < 200; i++) { clearInterval(i); clearTimeout(i); }
+    // Block setPerfLight and runPerfDemo if somehow called
+    window.setPerfLight  = function(){};
+    window.runPerfDemo   = function(){};
+    window.applyPerfData = function(){};
+  })();
+
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy, serverTimestamp, updateDoc, arrayUnion, increment, getDoc, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
