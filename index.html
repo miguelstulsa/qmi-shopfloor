@@ -516,14 +516,14 @@ header { background: linear-gradient(135deg, #001833 0%, #002a5c 100%); border-b
 .sched-empty-card .e-icon { font-size: 28px; margin-bottom: 8px; }
 
 /* ══════ TV DISPLAY — BROADCAST QUALITY ══════ */
-.sched-tv-mode { position:fixed;inset:0;z-index:9000;background:#00050f;display:none;flex-direction:column;overflow:hidden;font-family:‘Barlow’,sans-serif; }
+.sched-tv-mode { position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;height:100dvh;z-index:9000;background:#00050f;display:none;flex-direction:column;overflow:hidden;font-family:‘Barlow’,sans-serif; }
 .sched-tv-mode.open { display:flex; }
 
 /* TOP BAR */
 .sched-tv-header {
 background:linear-gradient(90deg,#001228 0%,#002050 50%,#001228 100%);
-padding:0 20px;
-height:70px;
+padding:0 14px;
+height:56px;
 display:flex;
 align-items:center;
 justify-content:space-between;
@@ -531,7 +531,7 @@ border-bottom:3px solid #f5c500;
 flex-shrink:0;
 position:relative;
 box-shadow:0 4px 30px rgba(0,0,0,0.6);
-gap:12px;
+gap:10px;
 }
 .sched-tv-header::after {
 content:’’;
@@ -544,10 +544,10 @@ background:linear-gradient(90deg,transparent,rgba(245,197,0,0.4),transparent);
 .sched-tv-logo-dot { width:10px;height:36px;background:#f5c500;border-radius:2px;box-shadow:0 0 12px rgba(245,197,0,0.7); }
 .sched-tv-title-wrap { display:flex;flex-direction:column;line-height:1; }
 .sched-tv-company { font-size:10px;letter-spacing:3px;color:#64748b;text-transform:uppercase;margin-bottom:1px; }
-.sched-tv-title { font-family:‘Bebas Neue’,sans-serif;font-size:26px;letter-spacing:4px;color:#f5c500; }
+.sched-tv-title { font-family:‘Bebas Neue’,sans-serif;font-size:20px;letter-spacing:4px;color:#f5c500; }
 .sched-tv-header-right { display:flex;align-items:center;gap:20px; }
 .sched-tv-clock-wrap { text-align:right; }
-.sched-tv-clock { font-family:‘Bebas Neue’,sans-serif;font-size:36px;letter-spacing:2px;color:#ffffff;line-height:1;text-shadow:0 0 20px rgba(255,255,255,0.3);white-space:nowrap; }
+.sched-tv-clock { font-family:‘Bebas Neue’,sans-serif;font-size:28px;letter-spacing:2px;color:#ffffff;line-height:1;text-shadow:0 0 20px rgba(255,255,255,0.3);white-space:nowrap; }
 .sched-tv-date-str { font-size:11px;color:#64748b;letter-spacing:1.5px;text-transform:uppercase;text-align:right;margin-top:1px; }
 .sched-tv-dots { display:flex;gap:8px;align-items:center; }
 .sched-tv-dot { width:10px;height:10px;border-radius:50%;background:#1a3a6c;transition:all 0.4s;cursor:pointer; }
@@ -557,19 +557,15 @@ background:linear-gradient(90deg,transparent,rgba(245,197,0,0.4),transparent);
 /* CONTROLS BAR */
 .sched-tv-controls {
 background:#000d1f;
-padding:5px 12px;
+padding:6px 20px;
 display:flex;
 align-items:center;
-gap:6px;
+gap:8px;
 border-bottom:1px solid rgba(26,74,140,0.5);
 flex-shrink:0;
-flex-wrap:nowrap;
-overflow-x:auto;
--webkit-overflow-scrolling:touch;
-scrollbar-width:none;
-white-space:nowrap;
+flex-wrap:wrap;
+row-gap:4px;
 }
-.sched-tv-controls::-webkit-scrollbar { display:none; }
 .sched-tv-ctrl-label { font-family:‘Bebas Neue’,sans-serif;font-size:12px;letter-spacing:2px;color:#475569; }
 .sched-tv-ctrl-btn { background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:#94a3b8;border-radius:6px;padding:5px 12px;font-family:‘Bebas Neue’,sans-serif;font-size:13px;letter-spacing:1px;cursor:pointer;transition:all 0.15s; }
 .sched-tv-ctrl-btn.active { background:rgba(245,197,0,0.15);border-color:#f5c500;color:#f5c500;box-shadow:0 0 10px rgba(245,197,0,0.2); }
@@ -583,16 +579,9 @@ white-space:nowrap;
 .sched-tv-exit { background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.4);color:#f87171;border-radius:6px;padding:5px 12px;font-family:‘Bebas Neue’,sans-serif;font-size:13px;letter-spacing:2px;cursor:pointer; }
 
 /* SLIDE STAGE */
-.sched-tv-stage { flex:1;overflow:hidden;position:relative;background:#00050f;min-height:0; }
+.sched-tv-stage { flex:1;min-height:0;overflow:hidden;position:relative;background:#00050f; }
 .sched-tv-slide { position:absolute;inset:0;padding:14px 16px 12px;overflow-y:auto;opacity:0;transition:opacity 0.6s ease;pointer-events:none; }
 .sched-tv-slide.active { opacity:1;pointer-events:auto; }
-
-@media (max-height:700px) {
-.sched-tv-header { height:50px; }
-.sched-tv-title  { font-size:18px; }
-.sched-tv-clock  { font-size:24px; }
-.sched-tv-date-str { display:none; }
-}
 
 /* CELL/SECTION HEADER in slide */
 .sched-tv-slide-title {
@@ -3939,7 +3928,10 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
   function openSchedTV() {
     TV.curSlide = 0;
     TV.paused   = false;
-    document.getElementById('schedTVMode').classList.add('open');
+    var tvEl = document.getElementById('schedTVMode');
+    tvEl.classList.add('open');
+    // Force exact pixel height for Safari which ignores 100dvh in fixed overlays
+    tvEl.style.height = window.innerHeight + 'px';
     document.body.style.overflow = 'hidden';
     buildTVSlides();
     renderTVStage();
@@ -3952,7 +3944,9 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
   }
   function closeSchedTV() {
     clearTVTimers();
-    document.getElementById('schedTVMode').classList.remove('open');
+    var tvEl = document.getElementById('schedTVMode');
+    tvEl.classList.remove('open');
+    tvEl.style.height = '';
     document.body.style.overflow = '';
   }
 
