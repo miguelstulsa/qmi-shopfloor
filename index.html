@@ -804,7 +804,7 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
       <div class="user-greeting" id="userGreeting">
         <span class="greeting-name">👋 <strong id="greetingName"></strong></span>
         <button class="admin-btn" id="adminBtn" onclick="openAdminPanel()">👑 Admin</button>
-        <a class="shop-switch-btn" id="shopSwitchBtn" href="https://miguelstulsa.github.io" target="_blank" title="Switch to Hill Manufacturing">🏭 HILL</a>
+        <a class="shop-switch-btn" id="shopSwitchBtn" href="https://miguelstulsa.github.io/" target="_blank" title="Switch to Hill Manufacturing">🏭 HILL</a>
         <button class="logout-btn" onclick="doLogout()">Logout</button>
       </div>
     </div>
@@ -1019,6 +1019,10 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
       <input type="text" id="operatorName" placeholder="Your name (e.g. Miguel)" />
       <input type="text" id="woInput" placeholder="WO# / Operation (e.g. 12345-OP10)" />
       <textarea id="noteText" rows="3" placeholder="Additional details..."></textarea>
+      <label style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#64748b;display:block;margin-bottom:4px;">Assign To</label>
+      <select id="assignToSelect" style="margin-bottom:10px;">
+        <option value="">— Notify entire management group —</option>
+      </select>
     </div>
     <div class="modal-actions">
       <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
@@ -1445,6 +1449,10 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     });
   };
   window.fbUpdateUserStatus = async function(id, status) { await updateDoc(doc(db, 'qmiUsers', id), { status }); };
+  window.fbSavePushoverKey = async function(id, key) {
+    await updateDoc(doc(db, 'qmiUsers', id), { pushoverKey: key.trim() });
+    showToast('green', 'Pushover key saved!', 'Direct notifications enabled for this user.');
+  };
   window.fbDeleteUser = async function(id) { await deleteDoc(doc(db, 'qmiUsers', id)); };
 
   document.getElementById('statusDot').style.background = '#22c55e';
@@ -1729,6 +1737,33 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
   const typeIcons  = { blue: '🔵', red: '🔴', yellow: '🟡', green: '🟢' };
 
   function openModal(machine, cell) {
+    // Populate assignee dropdown from approved users
+    var sel = document.getElementById('assignToSelect');
+    if (sel) {
+      sel.innerHTML = '<option value="">— Notify entire management group —</option>';
+      var users = window._fbListenUsersCache || [];
+      // Add admin first
+      var adminOpt = document.createElement('option');
+      adminOpt.value = 'qmiadmin';
+      adminOpt.textContent = '👑 Admin';
+      sel.appendChild(adminOpt);
+      // Add managers and plant managers
+      users.filter(function(u) {
+        return u.status === 'approved' && 
+               (u.role === 'manager' || u.role === 'plant_manager' || u.role === 'admin') &&
+               u.username !== 'qmiadmin';
+      }).sort(function(a,b) {
+        var ro = {plant_manager:0, manager:1, admin:2};
+        return (ro[a.role]||1) - (ro[b.role]||1);
+      }).forEach(function(u) {
+        var opt = document.createElement('option');
+        opt.value = u.username;
+        var roleIcon = u.role==='plant_manager' ? '🏭' : u.role==='admin' ? '👑' : '💼';
+        opt.textContent = roleIcon + ' ' + (u.name || u.username);
+        opt.dataset.pushoverKey = u.pushoverKey || '';
+        sel.appendChild(opt);
+      });
+    }
     currentMachine = machine; window.currentMachine = machine; currentCell = cell; selectedType = null;
     document.getElementById('modalTitle').textContent = 'Add Request';
     document.getElementById('modalMachineName').textContent = cell + ' — ' + machine;
@@ -1737,7 +1772,9 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     if (window.renderExistingNotes) window.renderExistingNotes();
     document.getElementById('modalOverlay').classList.add('active');
   }
-  function closeModal() { document.getElementById('modalOverlay').classList.remove('active'); window.currentMachine = ''; }
+  function closeModal() {
+    var sel = document.getElementById('assignToSelect');
+    if (sel) sel.selectedIndex = 0; document.getElementById('modalOverlay').classList.remove('active'); window.currentMachine = ''; }
   function handleOverlayClick(e) { if (e.target === document.getElementById('modalOverlay')) closeModal(); }
   function selectType(type) {
     selectedType = type;
@@ -1754,7 +1791,10 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     if (!window.submitNoteToFirebase) { showToast('red', 'Still connecting...', 'Wait a moment then try again.'); return; }
     const btn = document.querySelector('#modalOverlay .btn-submit');
     if (btn) { btn.disabled=true; btn.textContent='Saving...'; }
-    const note = { machine: currentMachine, cell: currentCell, type: selectedType, wo, detail, operator };
+    var assignSel = document.getElementById('assignToSelect');
+    var assignedTo = assignSel ? assignSel.value : '';
+    var assignedName = assignSel && assignSel.selectedIndex > 0 ? assignSel.options[assignSel.selectedIndex].text : 'Management Group';
+    const note = { machine: currentMachine, cell: currentCell, type: selectedType, wo, detail, operator, assignedTo, assignedName };
     try { await window.submitNoteToFirebase(note); }
     catch(err) {
       if (btn) { btn.disabled=false; btn.textContent='Submit'; }
@@ -1765,7 +1805,7 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     closeModal();
     showToast(selectedType, 'Request submitted for ' + currentMachine, wo);
     if (selectedType==='red'||selectedType==='yellow'||selectedType==='blue') {
-      sendPushover(selectedType, currentCell, currentMachine, wo, detail, operator);
+      sendPushover(selectedType, currentCell, currentMachine, wo, detail, operator, assignedTo, assignedName);
     }
   }
 
@@ -1791,19 +1831,62 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
   };
 
   // Shop floor request notifications
-  function sendPushover(type, cell, machine, wo, detail, operator) {
+  function sendPushover(type, cell, machine, wo, detail, operator, assignedTo, assignedName) {
     const titles = { red: '🔴 INSPECTION REQUEST', yellow: '🟡 MACHINIST REQUEST', blue: '🔵 PENDING WO' };
     const sounds  = { red: 'siren', yellow: 'bugle', blue: 'pushover' };
     const parts = [cell + ' — ' + machine];
-    if (operator) parts.push(operator);
+    if (operator) parts.push('From: ' + operator);
     parts.push('WO: ' + wo);
     if (detail) parts.push(detail);
-    safePushover(
-      titles[type] || 'SHOP REQUEST',
-      parts.join('\n'),
-      sounds[type] || 'pushover',
-      type === 'red' ? 1 : 0
-    );
+    if (assignedTo) parts.push('→ Assigned to: ' + (assignedName || assignedTo));
+
+    if (assignedTo && assignedTo !== '') {
+      // Send to specific person — look up their pushover key
+      var users = window._fbListenUsersCache || [];
+      var target = users.find(function(u){ return u.username === assignedTo; });
+      var targetKey = (target && target.pushoverKey) ? target.pushoverKey : null;
+
+      if (targetKey) {
+        // Send directly to their personal Pushover key
+        sendPushoverToKey(
+          titles[type] || 'SHOP REQUEST',
+          parts.join('\n'),
+          sounds[type] || 'pushover',
+          type === 'red' ? 1 : 0,
+          targetKey
+        );
+      } else {
+        // No personal key stored — fall back to group but mention who it's for
+        safePushover(
+          (titles[type] || 'SHOP REQUEST') + ' → ' + (assignedName || assignedTo),
+          parts.join('\n'),
+          sounds[type] || 'pushover',
+          type === 'red' ? 1 : 0
+        );
+      }
+    } else {
+      // No assignee — notify entire group
+      safePushover(
+        titles[type] || 'SHOP REQUEST',
+        parts.join('\n'),
+        sounds[type] || 'pushover',
+        type === 'red' ? 1 : 0
+      );
+    }
+  }
+
+  // Send to a specific Pushover user key
+  function sendPushoverToKey(title, message, sound, priority, userKey) {
+    var fd = new FormData();
+    fd.append('token',    'a3fz1eugorhyxgrjk5svuw9ym2nwy6');
+    fd.append('user',     userKey);
+    fd.append('title',    title || 'QMI');
+    fd.append('message',  message || '');
+    fd.append('sound',    sound || 'pushover');
+    fd.append('priority', String(priority !== undefined ? priority : 0));
+    fetch('https://api.pushover.net/1/messages.json', {
+      method: 'POST', mode: 'no-cors', body: fd
+    }).catch(function(e){ console.warn('Pushover direct:', e.message); });
   }
 
   function enableNotifications() {
@@ -2288,6 +2371,13 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
             '<div class="admin-user-info"><div class="admin-user-name">' + escHtml(u.name) + '</div><div class="admin-user-sub">@' + escHtml(u.username) + '</div></div>' +
             '<span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;background:' + roleColor + '22;color:' + roleColor + ';border:1px solid ' + roleColor + '44;">' + roleLabel + '</span>' +
           '<div class="admin-actions">' +
+            '<div style="margin-top:8px;display:flex;gap:6px;align-items:center;">' +
+            '<input type="text" placeholder="Pushover User Key (optional)" value="' + (u.pushoverKey||'') + '" ' +
+            'style="flex:1;background:rgba(255,255,255,0.05);border:1px solid #1a4a8c;border-radius:6px;padding:5px 8px;color:#f0f4f8;font-size:11px;font-family:Barlow,sans-serif;" ' +
+            'id="pkey-' + u.id + '" onchange="window.fbSavePushoverKey(\'' + u.id + '\', this.value)" />' +
+            '<button onclick="window.fbSavePushoverKey(\'' + u.id + '\', document.getElementById(\'pkey-' + u.id + '\').value)" ' +
+            'style="background:#f5c500;border:none;color:#001833;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;">SAVE KEY</button>' +
+            '</div>' +
             (userRole !== 'machinist'
               ? '<button class="admin-role-btn" onclick="setUserRole(\'' + u.id + '\',\'machinist\',this)" style="background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.5);color:#4ade80;">🔧 Machinist</button>'
               : '<button class="admin-role-btn" disabled style="background:rgba(34,197,94,0.3);border:1px solid #22c55e;color:#4ade80;opacity:0.6;cursor:default;">🔧 Current</button>') +
