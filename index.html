@@ -1543,62 +1543,51 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     }
   };
   window.fbLogin = async function(username, password) {
-    const hash = simpleHash(password);
-    const uLower = username.toLowerCase().trim();
+    try {
+      const hash   = simpleHash(password);
+      const uLower = username.toLowerCase().trim();
 
-    // Try all possible stored formats
-    let userDoc = null;
-    const attempts = [
-      uLower,
-      uLower.charAt(0).toUpperCase() + uLower.slice(1),
-      username.trim()
-    ];
-
-    for (var i = 0; i < attempts.length; i++) {
-      const snap = await getDocs(query(collection(db, 'qmiUsers'), where('username', '==', attempts[i])));
-      if (!snap.empty) { userDoc = snap.docs[0]; break; }
-    }
-
-    // Last resort: scan all approved users by name match
-    if (!userDoc) {
+      // Scan ALL users — no where() = no index needed
       const allSnap = await getDocs(collection(db, 'qmiUsers'));
+      let found = null;
       allSnap.forEach(d => {
-        if (!userDoc) {
+        if (!found) {
           const u = d.data();
-          const storedUser = (u.username || '').toLowerCase().trim();
-          if (storedUser === uLower) userDoc = d;
+          const stored = (u.username || '').toLowerCase().trim();
+          if (stored === uLower) found = { doc: d, data: u };
         }
       });
+
+      if (!found) return { error: 'Username not found. Check spelling or request access.' };
+
+      const { doc: userDoc, data } = found;
+
+      if (data.passwordHash !== hash) return { error: 'Incorrect password.' };
+      if (data.status === 'pending')  return { pending: true, name: data.name };
+      if (data.status === 'rejected') return { rejected: true };
+
+      return { success: true, user: {
+        id:          userDoc.id,
+        username:    data.username || uLower,
+        name:        data.name || username,
+        role:        data.role || 'machinist',
+        position:    data.position    || '',
+        pushoverKey: data.pushoverKey || '',
+        isManager:   data.isManager   || false
+      }};
+    } catch(e) {
+      console.error('fbLogin error:', e.code, e.message);
+      return { error: 'Login failed: ' + (e.message || e.code || 'Check connection') };
     }
-
-    if (!userDoc) return { error: 'Username not found. Check spelling or request access.' };
-
-    const data = userDoc.data();
-
-    // Fix: if stored username is different case, normalize it
-    if (!data.username || data.username.toLowerCase() !== uLower) {
-      try { await updateDoc(doc(db, 'qmiUsers', userDoc.id), { username: uLower }); } catch(e){}
-    }
-
-    if (data.passwordHash !== hash) return { error: 'Incorrect password.' };
-    if (data.status === 'pending')  return { pending: true, name: data.name };
-    if (data.status === 'rejected') return { rejected: true };
-
-    const userRole = data.role || 'machinist';
-    return { success: true, user: {
-      id:          userDoc.id,
-      username:    data.username || uLower,
-      name:        data.name || username,
-      role:        userRole,
-      position:    data.position    || '',
-      pushoverKey: data.pushoverKey || '',
-      isManager:   data.isManager   || false
-    }};
   };
   window.fbValidateUser = async function(username) {
-    const snap = await getDocs(query(collection(db, 'qmiUsers'), where('username', '==', username)));
-    if (snap.empty) return null;
-    return snap.docs[0].data();
+    const uLower = (username||'').toLowerCase().trim();
+    const snap = await getDocs(collection(db, 'qmiUsers'));
+    let found = null;
+    snap.forEach(d => {
+      if (!found && (d.data().username||'').toLowerCase().trim() === uLower) found = d.data();
+    });
+    return found;
   };
   window.fbListenUsers = function(callback) {
     return onSnapshot(collection(db, 'qmiUsers'),
@@ -1621,7 +1610,16 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
       }
     );
   };
-  window.fbUpdateUserStatus = async function(id, status) { await updateDoc(doc(db, 'qmiUsers', id), { status }); };
+  window.fbUpdateUserStatus = async function(id, status) {
+    try {
+      await updateDoc(doc(db, 'qmiUsers', id), { status });
+      console.log('✅ User status updated:', id, status);
+    } catch(e) {
+      console.error('fbUpdateUserStatus error:', e.code, e.message);
+      if (typeof showToast === 'function') showToast('red', 'Update failed', e.message || e.code);
+      throw e;
+    }
+  };
   window.fbSavePushoverKey = async function(id, key) {
     await updateDoc(doc(db, 'qmiUsers', id), { pushoverKey: key.trim() });
     showToast('green', 'Pushover key saved!', 'Direct notifications enabled for this user.');
@@ -1661,10 +1659,15 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
   };
   window.checkManagerAccess = async function(username) {
     if (username === 'qmiadmin') return true;
-    const snap = await getDocs(collection(db, 'qmiUsers'));
-    let found = null;
-    snap.forEach(d => { if (!found && (d.data().username||'').toLowerCase() === username.toLowerCase()) found = d.data(); });
-    if (found) return ['manager','plant_manager','admin'].includes(found.role) || found.isManager === true;
+    try {
+      const uLower = (username||'').toLowerCase().trim();
+      const snap = await getDocs(collection(db, 'qmiUsers'));
+      let found = null;
+      snap.forEach(d => {
+        if (!found && (d.data().username||'').toLowerCase().trim() === uLower) found = d.data();
+      });
+      if (found) return ['manager','plant_manager','admin'].includes(found.role) || found.isManager === true;
+    } catch(e) { console.warn('checkManagerAccess error:', e.message); }
     return false;
   };
   window.loadManagerList = async function() {
@@ -2847,8 +2850,8 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     function attempt() {
       var db2=window._db, m=window._fbModules;
       if (!db2||!m) return false;
-      m.getDocs(m.query(m.collection(db2,'qmiUsers'),m.where('status','==','approved')))
-       .then(function(snap){ var list=[]; snap.forEach(function(d){var u=d.data();u.id=d.id;list.push(u);}); window._fbListenUsersCache=list; cb(list); })
+      m.getDocs(m.collection(db2,'qmiUsers'))
+       .then(function(snap){ var list=[]; snap.forEach(function(d){var u=d.data();u.id=d.id;if(u.status==='approved')list.push(u);}); window._fbListenUsersCache=list; cb(list); })
        .catch(function(e){ console.warn('mgmtFetchUsers:',e); cb(window._fbListenUsersCache||[]); });
       return true;
     }
