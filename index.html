@@ -540,12 +540,12 @@ bottom:-3px;left:0;right:0;
 height:1px;
 background:linear-gradient(90deg,transparent,rgba(245,197,0,0.4),transparent);
 }
-.sched-tv-header-left { display:flex;align-items:center;gap:18px; }
+.sched-tv-header-left { display:flex;align-items:center;gap:8px;min-width:0;flex:1;overflow:hidden; }
 .sched-tv-logo-dot { width:10px;height:36px;background:#f5c500;border-radius:2px;box-shadow:0 0 12px rgba(245,197,0,0.7); }
 .sched-tv-title-wrap { display:flex;flex-direction:column;line-height:1; }
 .sched-tv-company { font-size:10px;letter-spacing:3px;color:#64748b;text-transform:uppercase;margin-bottom:1px; }
-.sched-tv-title { font-family:‘Bebas Neue’,sans-serif;font-size:20px;letter-spacing:4px;color:#f5c500; }
-.sched-tv-header-right { display:flex;align-items:center;gap:20px; }
+.sched-tv-title { font-family:‘Bebas Neue’,sans-serif;font-size:18px;letter-spacing:2px;color:#f5c500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.sched-tv-header-right { display:flex;align-items:center;gap:12px;flex-shrink:0; }
 .sched-tv-clock-wrap { text-align:right; }
 .sched-tv-clock { font-family:‘Bebas Neue’,sans-serif;font-size:28px;letter-spacing:2px;color:#ffffff;line-height:1;text-shadow:0 0 20px rgba(255,255,255,0.3);white-space:nowrap; }
 .sched-tv-date-str { font-size:11px;color:#64748b;letter-spacing:1.5px;text-transform:uppercase;text-align:right;margin-top:1px; }
@@ -2465,9 +2465,7 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     var switchBtn  = document.getElementById('shopSwitchBtn');
 
     if (mgmtTab)    mgmtTab.style.display    = isManagementRole ? '' : 'none';
-    // ALL logged-in employees can VIEW the Schedule tab
     if (schedTab)   schedTab.style.display   = '';
-    // Only admin / plant_manager / manager can ADD or EDIT jobs
     if (schedAddBtn) schedAddBtn.style.display = isManagementRole ? '' : 'none';
 
     if (isAdmin || isPlantManager) {
@@ -3938,7 +3936,6 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     TV.paused   = false;
     var tvEl = document.getElementById('schedTVMode');
     tvEl.classList.add('open');
-    // Force exact pixel height for Safari (ignores 100dvh on fixed overlays)
     tvEl.style.height = window.innerHeight + 'px';
     document.body.style.overflow = 'hidden';
     buildTVSlides();
@@ -4273,8 +4270,8 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
 
   <div class="sched-tv-header">
     <div class="sched-tv-header-left">
-      <div class="sched-tv-title">QMI — DAILY SCHEDULE</div>
-      <div class="sched-tv-date-str" id="tvDateStr"></div>
+      <div class="sched-tv-title">📋 DAILY SCHEDULE</div>
+      <div class="sched-tv-date-str" id="tvDateStr" style="display:none;"></div>
     </div>
     <div class="sched-tv-header-right">
       <div class="sched-tv-clock" id="tvClock">--:--</div>
