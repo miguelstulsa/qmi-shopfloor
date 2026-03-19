@@ -1424,6 +1424,7 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
   window.simpleHash = simpleHash;
   window.fbSignup = async function(name, username, password) {
     const hash = simpleHash(password);
+    username = username.toLowerCase().trim(); // Always store lowercase
     const snap = await getDocs(query(collection(db, 'qmiUsers'), where('username', '==', username)));
     if (!snap.empty) return { error: 'Username already taken.' };
     await addDoc(collection(db, 'qmiUsers'), { name, username, passwordHash: hash, status: 'pending', createdAt: serverTimestamp() });
@@ -1431,7 +1432,12 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
   };
   window.fbLogin = async function(username, password) {
     const hash = simpleHash(password);
-    const snap = await getDocs(query(collection(db, 'qmiUsers'), where('username', '==', username)));
+    username = username.toLowerCase().trim();
+    let snap = await getDocs(query(collection(db, 'qmiUsers'), where('username', '==', username)));
+    // If not found lowercase, try original case (fixes existing accounts)
+    if (snap.empty) {
+      snap = await getDocs(query(collection(db, 'qmiUsers'), where('username', '==', username.charAt(0).toUpperCase() + username.slice(1))));
+    }
     if (snap.empty) return { error: 'Username not found.' };
     const userDoc = snap.docs[0];
     const data = userDoc.data();
@@ -2355,7 +2361,18 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     if (!window.fbListenUsers) { setTimeout(listenToUsers, 500); return; }
     window.fbListenUsers(function(users) {
       window._fbListenUsersCache = users;
-      renderAdminUsers(users);
+      // Always update pending badge
+      var pending = users.filter(function(u){ return u.status === 'pending'; });
+      var adminBtn = document.getElementById('adminBtn');
+      if (adminBtn && window._isAdmin) {
+        adminBtn.textContent = pending.length > 0 ? '👑 Admin (' + pending.length + ' pending)' : '👑 Admin';
+        adminBtn.style.background = pending.length > 0 ? 'linear-gradient(135deg,#7c2000,#ef4444)' : '';
+      }
+      // Re-render admin panel if open
+      var panel = document.getElementById('adminPanel');
+      if (panel && panel.classList.contains('open')) {
+        renderAdminUsers(users);
+      }
     });
   }
 
@@ -2380,6 +2397,7 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
 
     const renderSection = (list, containerId, showApprove, showReject) => {
       const el = document.getElementById(containerId);
+      if (!el) return;
       if (list.length === 0) { el.innerHTML = '<div class="admin-empty">None</div>'; return; }
       el.innerHTML = '';
       list.forEach(u => {
@@ -2453,7 +2471,28 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
       }
     }
 
-    renderSection(pending,  'adminPending',  true,  true);
+    // Custom empty messages per section
+    var pendingEl = document.getElementById('adminPending');
+    if (pendingEl) {
+      if (pending.length === 0) { pendingEl.innerHTML = '<div class="admin-empty">No pending requests</div>'; }
+      else {
+        pendingEl.innerHTML = '';
+        pending.forEach(u => {
+          const row = document.createElement('div');
+          row.className = 'admin-user-row';
+          const joined = u.createdAt ? new Date(u.createdAt.seconds*1000).toLocaleDateString() : '—';
+          row.innerHTML =
+            '<div class="admin-user-info"><div class="admin-user-name">' + escHtml(u.name) + '</div>' +
+            '<div class="admin-user-sub">@' + escHtml(u.username) + ' · Requested ' + joined + '</div></div>' +
+            '<div class="admin-actions">' +
+            '<button class="admin-approve" onclick="updateUserStatus(\'' + u.id + '\',\'approved\')">✅ Approve</button>' +
+            '<button class="admin-reject" onclick="updateUserStatus(\'' + u.id + '\',\'rejected\')">❌ Reject</button>' +
+            '<button class="admin-delete" onclick="deleteUser(\'' + u.id + '\')">🗑</button></div>';
+          pendingEl.appendChild(row);
+        });
+      }
+    }
+    // renderSection(pending,  'adminPending',  true,  true); // replaced above
     renderSection(approved, 'adminApproved', false, true);
     renderSection(rejected, 'adminRejected', true,  false);
   }
