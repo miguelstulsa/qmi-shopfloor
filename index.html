@@ -1453,6 +1453,14 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     await updateDoc(doc(db, 'qmiUsers', id), { pushoverKey: key.trim() });
     showToast('green', 'Pushover key saved!', 'Direct notifications enabled for this user.');
   };
+  window.savePos = function(id) {
+    var inp = document.getElementById('pos-' + id);
+    if (inp && window.fbSavePosition) window.fbSavePosition(id, inp.value);
+  };
+  window.fbSavePosition = async function(id, position) {
+    await updateDoc(doc(db, 'qmiUsers', id), { position: position.trim() });
+    showToast('green', '✅ Position saved!', position.trim() || 'Position cleared.');
+  };
   window.fbDeleteUser = async function(id) { await deleteDoc(doc(db, 'qmiUsers', id)); };
 
   document.getElementById('statusDot').style.background = '#22c55e';
@@ -1759,7 +1767,8 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
         var opt = document.createElement('option');
         opt.value = u.username;
         var roleIcon = u.role==='plant_manager' ? '🏭' : u.role==='admin' ? '👑' : '💼';
-        opt.textContent = roleIcon + ' ' + (u.name || u.username);
+        var posLabel = u.position ? ' — ' + u.position : '';
+        opt.textContent = roleIcon + ' ' + (u.name || u.username) + posLabel;
         opt.dataset.pushoverKey = u.pushoverKey || '';
         sel.appendChild(opt);
       });
@@ -1838,7 +1847,11 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     if (operator) parts.push('From: ' + operator);
     parts.push('WO: ' + wo);
     if (detail) parts.push(detail);
-    if (assignedTo) parts.push('→ Assigned to: ' + (assignedName || assignedTo));
+    if (assignedTo) {
+      var assignTarget = (window._fbListenUsersCache||[]).find(function(u){ return u.username===assignedTo; });
+      var assignPos = assignTarget && assignTarget.position ? ' (' + assignTarget.position + ')' : '';
+      parts.push('→ Assigned to: ' + (assignedName || assignedTo) + assignPos);
+    }
 
     if (assignedTo && assignedTo !== '') {
       // Send to specific person — look up their pushover key
@@ -2228,7 +2241,8 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     const greetingName = document.getElementById('greetingName');
     const roleMap = { admin: '👑', plant_manager: '🏭', manager: '💼', machinist: '🔧' };
     const roleEmoji = roleMap[user.role] || '🔧';
-    greetingName.innerHTML = roleEmoji + ' <strong>' + escHtml(user.name) + '</strong>';
+    var posLine = user.position ? '<br><span style="font-size:10px;color:#94a3b8;font-weight:400;letter-spacing:0.5px;">' + escHtml(user.position) + '</span>' : '';
+    greetingName.innerHTML = roleEmoji + ' <strong>' + escHtml(user.name) + '</strong>' + posLine;
 
     if (user.role === 'admin') {
       document.getElementById('adminBtn').classList.add('visible');
@@ -2288,6 +2302,16 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     showAuthTab('login');
   }
 
+  // Event delegation for position save buttons
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.pos-save-btn');
+    if (!btn) return;
+    var uid = btn.dataset.uid;
+    if (!uid) return;
+    var inp = document.getElementById('pos-' + uid);
+    if (inp && window.fbSavePosition) window.fbSavePosition(uid, inp.value);
+  });
+
   function openAdminPanel() {
     document.getElementById('adminPanel').classList.add('open');
     // Always force a fresh user load when opening panel
@@ -2344,7 +2368,11 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
         const roleColor = roleColors[userRole] || '#22c55e';
         const roleLabel = roleLabels[userRole] || '🔧 Machinist';
         row.innerHTML =
-          '<div class="admin-user-info"><div class="admin-user-name">' + escHtml(u.name) + '</div><div class="admin-user-sub">@' + escHtml(u.username) + ' · Joined ' + joined + '</div></div>' +
+          '<div class="admin-user-info">' +
+          '<div class="admin-user-name">' + escHtml(u.name) + '</div>' +
+          '<div class="admin-user-sub">@' + escHtml(u.username) + ' · Joined ' + joined + '</div>' +
+          (u.position ? '<div style="font-size:11px;color:#f5c500;margin-top:2px;">🏷 ' + escHtml(u.position) + '</div>' : '') +
+          '</div>' +
           '<span style="font-size:11px;font-weight:700;letter-spacing:1px;padding:3px 8px;border-radius:6px;background:' + roleColor + '22;color:' + roleColor + ';border:1px solid ' + roleColor + '44;white-space:nowrap;">' + roleLabel + '</span>' +
           '<div class="admin-actions">' +
           (showApprove ? '<button class="admin-approve" onclick="updateUserStatus(\'' + u.id + '\',\'approved\')">✅ Approve</button>' : '') +
@@ -2368,10 +2396,23 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
           row.className = 'admin-user-row';
           row.style.flexWrap = 'wrap';
           row.innerHTML =
-            '<div class="admin-user-info"><div class="admin-user-name">' + escHtml(u.name) + '</div><div class="admin-user-sub">@' + escHtml(u.username) + '</div></div>' +
+            '<div class="admin-user-info">' +
+            '<div class="admin-user-name">' + escHtml(u.name) + '</div>' +
+            '<div class="admin-user-sub">@' + escHtml(u.username) + '</div>' +
+            (u.position ? '<div style="font-size:12px;color:#f5c500;margin-top:2px;letter-spacing:0.5px;">🏷 ' + escHtml(u.position) + '</div>' : '') +
+            '</div>' +
             '<span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;background:' + roleColor + '22;color:' + roleColor + ';border:1px solid ' + roleColor + '44;">' + roleLabel + '</span>' +
           '<div class="admin-actions">' +
-            '<div style="margin-top:8px;display:flex;gap:6px;align-items:center;">' +
+            '<div style="margin-top:10px;margin-bottom:6px;">' +
+            '<div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#64748b;margin-bottom:4px;">Job Title / Position</div>' +
+            '<div style="display:flex;gap:6px;">' +
+            '<input type="text" placeholder="e.g. CNC Operator, Setup Tech, Lead Machinist" value="' + escHtml(u.position||'') + '" ' +
+            'style="flex:1;background:rgba(255,255,255,0.06);border:1px solid #1a4a8c;border-radius:8px;padding:8px 10px;color:#f0f4f8;font-size:12px;font-family:Barlow,sans-serif;outline:none;" ' +
+            'id="pos-' + u.id + '" />' +
+            '<button data-uid="' + u.id + '" class="pos-save-btn" ' +
+            'style="background:#f5c500;border:none;color:#001833;border-radius:8px;padding:8px 12px;font-family:Bebas Neue,sans-serif;font-size:13px;letter-spacing:1px;cursor:pointer;white-space:nowrap;">SAVE</button>' +
+            '</div></div>' +
+            '<div style="margin-bottom:8px;display:flex;gap:6px;align-items:center;">' +
             '<input type="text" placeholder="Pushover User Key (optional)" value="' + (u.pushoverKey||'') + '" ' +
             'style="flex:1;background:rgba(255,255,255,0.05);border:1px solid #1a4a8c;border-radius:6px;padding:5px 8px;color:#f0f4f8;font-size:11px;font-family:Barlow,sans-serif;" ' +
             'id="pkey-' + u.id + '" onchange="window.fbSavePushoverKey(\'' + u.id + '\', this.value)" />' +
