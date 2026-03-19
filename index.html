@@ -1576,9 +1576,16 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     return snap.docs[0].data();
   };
   window.fbListenUsers = function(callback) {
-    return onSnapshot(query(collection(db, 'qmiUsers'), orderBy('createdAt', 'asc')), (snap) => {
+    // No orderBy — avoids Firestore index requirement that can cause silent empty results
+    return onSnapshot(collection(db, 'qmiUsers'), (snap) => {
       const users = [];
       snap.forEach(d => users.push({ id: d.id, ...d.data() }));
+      // Sort client-side by createdAt
+      users.sort(function(a,b){
+        var ta = a.createdAt ? (a.createdAt.seconds||0) : 0;
+        var tb = b.createdAt ? (b.createdAt.seconds||0) : 0;
+        return ta - tb;
+      });
       callback(users);
     });
   };
@@ -1622,20 +1629,20 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
   };
   window.checkManagerAccess = async function(username) {
     if (username === 'qmiadmin') return true;
-    const snap = await getDocs(query(collection(db, 'qmiUsers'), where('username', '==', username)));
-    if (!snap.empty) {
-      const u = snap.docs[0].data();
-      return ['manager','plant_manager','admin'].includes(u.role) || u.isManager === true;
-    }
+    const snap = await getDocs(collection(db, 'qmiUsers'));
+    let found = null;
+    snap.forEach(d => { if (!found && (d.data().username||'').toLowerCase() === username.toLowerCase()) found = d.data(); });
+    if (found) return ['manager','plant_manager','admin'].includes(found.role) || found.isManager === true;
     return false;
   };
   window.loadManagerList = async function() {
     const box = document.getElementById('adminManagerList');
     if (!box) return;
-    const snap = await getDocs(query(collection(db, 'qmiUsers'), where('status', '==', 'approved')));
-    if (snap.empty) { box.innerHTML = '<div class="admin-empty">No approved users</div>'; return; }
+    const snap = await getDocs(collection(db, 'qmiUsers'));
+    const approved = snap.docs.filter(d => d.data().status === 'approved');
+    if (approved.length === 0) { box.innerHTML = '<div class="admin-empty">No approved users</div>'; return; }
     box.innerHTML = '';
-    snap.forEach(d => {
+    approved.forEach(d => {
       const u = d.data();
       const isM = u.isManager === true;
       const row = document.createElement('div');
