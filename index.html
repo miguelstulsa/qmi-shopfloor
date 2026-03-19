@@ -2463,7 +2463,9 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     var switchBtn  = document.getElementById('shopSwitchBtn');
 
     if (mgmtTab)    mgmtTab.style.display    = isManagementRole ? '' : 'none';
-    if (schedTab)   schedTab.style.display   = isManagementRole ? '' : 'none';
+    // ALL logged-in employees can VIEW the Schedule tab
+    if (schedTab)   schedTab.style.display   = '';
+    // Only admin / plant_manager / manager can ADD or EDIT jobs
     if (schedAddBtn) schedAddBtn.style.display = isManagementRole ? '' : 'none';
 
     if (isAdmin || isPlantManager) {
@@ -3616,11 +3618,15 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     nameDiv.appendChild(nm); nameDiv.appendChild(cl);
     hdr.appendChild(nameDiv);
     if (!tvMode) {
-      var editBtn = document.createElement('button');
-      editBtn.className = 'sched-edit-btn';
-      editBtn.textContent = '✏️ Edit';
-      editBtn.onclick = function() { openSchedModal(key); };
-      hdr.appendChild(editBtn);
+      var _editRole = window._currentRole || 'machinist';
+      var _canEdit  = window._isAdmin || window._isPlantManager || ['admin','plant_manager','manager'].includes(_editRole);
+      if (_canEdit) {
+        var editBtn = document.createElement('button');
+        editBtn.className = 'sched-edit-btn';
+        editBtn.textContent = '✏️ Edit';
+        editBtn.onclick = function() { openSchedModal(key); };
+        hdr.appendChild(editBtn);
+      }
     }
     card.appendChild(hdr);
 
