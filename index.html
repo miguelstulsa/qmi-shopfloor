@@ -848,6 +848,16 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     </div>
 
 ```
+<!-- FIRESTORE RULES REMINDER -->
+<div class="admin-section" style="border:1px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.05);">
+  <div class="admin-section-title" style="color:#f87171;">⚠️ If Users Keep Disappearing</div>
+  <div style="font-size:12px;color:#94a3b8;line-height:1.8;">
+    Go to <strong style="color:#f5c500;">console.firebase.google.com</strong> → QMI Manufacturing → Firestore Database → <strong style="color:#f5c500;">Rules</strong> tab → make sure it says:<br>
+    <code style="background:rgba(0,0,0,0.4);padding:4px 8px;border-radius:4px;display:block;margin:6px 0;color:#4ade80;font-size:11px;">allow read, write: if true;</code>
+    Then tap <strong style="color:#f5c500;">Publish</strong>.
+  </div>
+</div>
+
 <!-- PUSHOVER SETTINGS -->
 <div class="admin-section">
   <div class="admin-section-title">🔔 Pushover Notification Settings</div>
@@ -1510,12 +1520,27 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
   }
   window.simpleHash = simpleHash;
   window.fbSignup = async function(name, username, password) {
-    const hash = simpleHash(password);
-    username = username.toLowerCase().trim(); // Always store lowercase
-    const snap = await getDocs(query(collection(db, 'qmiUsers'), where('username', '==', username)));
-    if (!snap.empty) return { error: 'Username already taken.' };
-    await addDoc(collection(db, 'qmiUsers'), { name, username, passwordHash: hash, status: 'pending', createdAt: serverTimestamp() });
-    return { success: true };
+    try {
+      const hash = simpleHash(password);
+      username = username.toLowerCase().trim();
+      // Check for existing username
+      const allSnap = await getDocs(collection(db, 'qmiUsers'));
+      let taken = false;
+      allSnap.forEach(d => { if ((d.data().username||'').toLowerCase() === username) taken = true; });
+      if (taken) return { error: 'Username already taken.' };
+      // Write to Firestore
+      const docRef = await addDoc(collection(db, 'qmiUsers'), {
+        name, username, passwordHash: hash,
+        status: 'pending',
+        createdAt: serverTimestamp(),
+        role: 'machinist'
+      });
+      console.log('User saved to Firestore:', docRef.id);
+      return { success: true };
+    } catch(e) {
+      console.error('fbSignup error:', e.code, e.message);
+      return { error: 'Save failed: ' + (e.message || e.code || 'Check Firestore rules') };
+    }
   };
   window.fbLogin = async function(username, password) {
     const hash = simpleHash(password);
@@ -1576,18 +1601,25 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     return snap.docs[0].data();
   };
   window.fbListenUsers = function(callback) {
-    // No orderBy — avoids Firestore index requirement that can cause silent empty results
-    return onSnapshot(collection(db, 'qmiUsers'), (snap) => {
-      const users = [];
-      snap.forEach(d => users.push({ id: d.id, ...d.data() }));
-      // Sort client-side by createdAt
-      users.sort(function(a,b){
-        var ta = a.createdAt ? (a.createdAt.seconds||0) : 0;
-        var tb = b.createdAt ? (b.createdAt.seconds||0) : 0;
-        return ta - tb;
-      });
-      callback(users);
-    });
+    return onSnapshot(collection(db, 'qmiUsers'),
+      (snap) => {
+        const users = [];
+        snap.forEach(d => users.push({ id: d.id, ...d.data() }));
+        users.sort(function(a,b){
+          var ta = a.createdAt ? (a.createdAt.seconds||0) : 0;
+          var tb = b.createdAt ? (b.createdAt.seconds||0) : 0;
+          return ta - tb;
+        });
+        callback(users);
+      },
+      (error) => {
+        console.error('Firestore qmiUsers read error:', error.code, error.message);
+        // Show error toast so admin knows
+        if (typeof showToast === 'function') {
+          showToast('red', 'Firebase Read Error', error.code + ': ' + error.message.slice(0,60));
+        }
+      }
+    );
   };
   window.fbUpdateUserStatus = async function(id, status) { await updateDoc(doc(db, 'qmiUsers', id), { status }); };
   window.fbSavePushoverKey = async function(id, key) {
@@ -3483,6 +3515,25 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     });
   }
   loadScheduleFromFirestore();
+
+  // ── TEST FIRESTORE CONNECTION ON LOAD ──
+  // Wait for Firebase module to be ready before testing
+  setTimeout(async function testFirestoreConnection() {
+    if (!window._db || !window._fbModules) {
+      setTimeout(testFirestoreConnection, 1000);
+      return;
+    }
+    try {
+      await window._fbModules.getDocs(window._fbModules.collection(window._db, 'qmiUsers'));
+      console.log('✅ Firestore connected — qmiUsers readable');
+    } catch(e) {
+      console.error('❌ Firestore connection failed:', e.code, e.message);
+      var banner = document.createElement('div');
+      banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#7c0000;color:#fff;padding:10px 16px;font-size:13px;font-family:Barlow,sans-serif;text-align:center;';
+      banner.innerHTML = '⚠️ <strong>Firebase error: ' + (e.code || e.message) + '</strong> — Check Firestore Rules → set <code>allow read, write: if true</code> → Publish';
+      document.body.prepend(banner);
+    }
+  }, 3000);
   setTimeout(updateSchedDots, 500);
 
   // ── Update date display ──
