@@ -744,9 +744,14 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
       <div class="admin-section-title">🎭 User Roles</div>
       <div style="font-size:11px;color:#64748b;margin-bottom:12px;">Assign roles to approved users. Managers get the Management tab.</div>
       <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-        <div style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);font-size:12px;color:#f5c500;">👑 Admin — full access</div>
-        <div style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);font-size:12px;color:#60a5fa;">💼 Manager — management tab</div>
-        <div style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);font-size:12px;color:#4ade80;">🔧 Machinist — shop floor</div>
+        <div style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;background:rgba(245,197,0,0.1);border:1px solid rgba(245,197,0,0.3);font-size:12px;color:#f5c500;">👑 Admin — full access to both shops</div>
+        <div style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.5);font-size:12px;color:#a855f7;">🏭 Plant Manager — Runs QMI — full mgmt access</div>
+        <div style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.5);font-size:12px;color:#3b82f6;">💼 Manager — Management tab access</div>
+        <div style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.5);font-size:12px;color:#22c55e;">🔧 Machinist — Shop floor only</div>
+        <div style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;background:rgba(6,182,212,0.15);border:1px solid rgba(6,182,212,0.5);font-size:12px;color:#06b6d4;">📦 Shipping & Receiving — Shop floor only</div>
+        <div style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;background:rgba(236,72,153,0.15);border:1px solid rgba(236,72,153,0.5);font-size:12px;color:#ec4899;">🔍 Quality Control — Shop floor only</div>
+        <div style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;background:rgba(249,115,22,0.15);border:1px solid rgba(249,115,22,0.5);font-size:12px;color:#f97316;">⚙️ Saw Operator — Shop floor only</div>
+        <div style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;background:rgba(234,179,8,0.15);border:1px solid rgba(234,179,8,0.5);font-size:12px;color:#eab308;">🔥 Welder — Shop floor only</div>
       </div>
       <div id="adminRolesList"><div class="admin-empty">No approved users</div></div>
     </div>
@@ -1431,7 +1436,7 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     const userDoc = snap.docs[0];
     const data = userDoc.data();
     if (data.passwordHash !== hash) return { error: 'Incorrect password.' };
-    if (data.status === 'pending') return { pending: true };
+    if (data.status === 'pending') return { pending: true, name: data.name };
     if (data.status === 'rejected') return { rejected: true };
     const userRole = data.role || 'machinist';
     return { success: true, user: { username: data.username, name: data.name, role: userRole, id: userDoc.id } };
@@ -1485,7 +1490,7 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     const snap = await getDocs(query(collection(db, 'qmiUsers'), where('username', '==', username)));
     if (!snap.empty) {
       const u = snap.docs[0].data();
-      return u.role === 'manager' || u.isManager === true;
+      return ['manager','plant_manager','admin'].includes(u.role) || u.isManager === true;
     }
     return false;
   };
@@ -2215,7 +2220,13 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
       if (!window.fbSignup) { setMsg('signupMsg', 'App still loading, please try again.', 'error'); return; }
       const result = await window.fbSignup(name, username, password);
       if (result.error) { setMsg('signupMsg', result.error, 'error'); return; }
-      setMsg('signupMsg', '✅ Request submitted! Check back after admin approval.', 'success');
+      setMsg('signupMsg', '✅ Request submitted! An admin will approve your access shortly.', 'success');
+      // Notify admin via Pushover
+      safePushover(
+        '🆕 QMI Access Request',
+        name + ' (@' + username + ') has requested access to QMI Shop Floor.',
+        'pushover', 0
+      );
       document.getElementById('signupName').value = '';
       document.getElementById('signupUser').value = '';
       document.getElementById('signupPass').value = '';
@@ -2239,7 +2250,7 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
 
     // Show role badge next to name
     const greetingName = document.getElementById('greetingName');
-    const roleMap = { admin: '👑', plant_manager: '🏭', manager: '💼', machinist: '🔧' };
+    const roleMap = { admin:'👑', plant_manager:'🏭', manager:'💼', machinist:'🔧', shipping_receiving:'📦', quality_control:'🔍', saw_operator:'⚙️', welder:'🔥' };
     const roleEmoji = roleMap[user.role] || '🔧';
     var posLine = user.position ? '<br><span style="font-size:10px;color:#94a3b8;font-weight:400;letter-spacing:0.5px;">' + escHtml(user.position) + '</span>' : '';
     greetingName.innerHTML = roleEmoji + ' <strong>' + escHtml(user.name) + '</strong>' + posLine;
@@ -2353,8 +2364,19 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     const approved = users.filter(u => u.status === 'approved');
     const rejected = users.filter(u => u.status === 'rejected');
 
-    const roleColors = { admin: '#f5c500', manager: '#3b82f6', machinist: '#22c55e' };
-    const roleLabels = { admin: '👑 Admin', plant_manager: '🏭 Plant Manager', manager: '💼 Manager', machinist: '🔧 Machinist' };
+    // Show pending count badge on Admin button
+    var adminBtn = document.getElementById('adminBtn');
+    if (adminBtn) {
+      adminBtn.textContent = pending.length > 0
+        ? '👑 Admin (' + pending.length + ' pending)'
+        : '👑 Admin';
+      adminBtn.style.background = pending.length > 0
+        ? 'linear-gradient(135deg,#7c2000,#ef4444)'
+        : '';
+    }
+
+    const roleColors = { admin:'#f5c500', plant_manager:'#a855f7', manager:'#3b82f6', machinist:'#22c55e', shipping_receiving:'#06b6d4', quality_control:'#ec4899', saw_operator:'#f97316', welder:'#eab308' };
+    const roleLabels = { admin:'👑 Admin', plant_manager:'🏭 Plant Manager', manager:'💼 Manager', machinist:'🔧 Machinist', shipping_receiving:'📦 Shipping & Receiving', quality_control:'🔍 Quality Control', saw_operator:'⚙️ Saw Operator', welder:'🔥 Welder' };
 
     const renderSection = (list, containerId, showApprove, showReject) => {
       const el = document.getElementById(containerId);
@@ -2436,8 +2458,33 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     renderSection(rejected, 'adminRejected', true,  false);
   }
 
-  async function updateUserStatus(id, status) { await window.fbUpdateUserStatus(id, status); }
-  async function deleteUser(id) { if (!confirm('Delete this user permanently?')) return; await window.fbDeleteUser(id); }
+  async function updateUserStatus(id, status) {
+    var users = window._fbListenUsersCache || [];
+    var u = users.find(function(x){ return x.id === id; });
+    var uname = u ? (u.name || u.username) : 'User';
+    await window.fbUpdateUserStatus(id, status);
+    if (status === 'approved') {
+      showToast('green', '✅ ' + uname + ' approved!', 'They can now log in to QMI.');
+    } else if (status === 'rejected') {
+      showToast('red', '❌ ' + uname + ' rejected', 'Access denied.');
+    }
+  }
+  async function deleteUser(id) {
+    // Find user name for confirmation
+    var users = window._fbListenUsersCache || [];
+    var u = users.find(function(x){ return x.id === id; });
+    var uname = u ? (u.name || u.username) : 'this user';
+    var confirm1 = confirm('⚠️ Delete ' + uname + ' permanently?\n\nThis cannot be undone.');
+    if (!confirm1) return;
+    // Double confirm — type DELETE
+    var typed = prompt('Type DELETE to confirm removing ' + uname + ':');
+    if (!typed || typed.trim().toUpperCase() !== 'DELETE') {
+      showToast('red', 'Cancelled', 'User was not deleted.');
+      return;
+    }
+    await window.fbDeleteUser(id);
+    showToast('green', 'User removed', uname + ' has been deleted.');
+  }
 
   window.addEventListener('load', function() {
     setTimeout(function() {
@@ -2597,10 +2644,14 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
 
   function mgmtRoleStyle(u) {
     var r=((u&&u.role)||'machinist').toLowerCase();
-    if(r==='admin'||(u&&u.username==='qmiadmin')) return {label:'Admin',         border:'#f5c500',bg:'linear-gradient(135deg,#7c5a00,#f5c500)'};
-    if(r==='plant_manager')                        return {label:'Plant Manager', border:'#a855f7',bg:'linear-gradient(135deg,#4a1080,#a855f7)'};
-    if(r==='manager'||(u&&u.isManager===true))     return {label:'Manager',       border:'#3b82f6',bg:'linear-gradient(135deg,#1e3a8a,#3b82f6)'};
-    return                                                {label:'Machinist',     border:'#22c55e',bg:'linear-gradient(135deg,#0a3320,#22c55e)'};
+    if(r==='admin'||(u&&u.username==='qmiadmin')) return {label:'Admin',               border:'#f5c500',bg:'linear-gradient(135deg,#7c5a00,#f5c500)'};
+    if(r==='plant_manager')                        return {label:'Plant Manager',       border:'#a855f7',bg:'linear-gradient(135deg,#4a1080,#a855f7)'};
+    if(r==='manager'||(u&&u.isManager===true))     return {label:'Manager',             border:'#3b82f6',bg:'linear-gradient(135deg,#1e3a8a,#3b82f6)'};
+    if(r==='shipping_receiving')                   return {label:'Shipping & Receiving',border:'#06b6d4',bg:'linear-gradient(135deg,#0a4a5c,#06b6d4)'};
+    if(r==='quality_control')                      return {label:'Quality Control',     border:'#ec4899',bg:'linear-gradient(135deg,#6a0a3a,#ec4899)'};
+    if(r==='saw_operator')                         return {label:'Saw Operator',        border:'#f97316',bg:'linear-gradient(135deg,#7c2a00,#f97316)'};
+    if(r==='welder')                               return {label:'Welder',              border:'#eab308',bg:'linear-gradient(135deg,#5c4500,#eab308)'};
+    return                                                {label:'Machinist',           border:'#22c55e',bg:'linear-gradient(135deg,#0a3320,#22c55e)'};
   }
 
   function mgmtPopulateList(box, users, showDm, showCall) {
