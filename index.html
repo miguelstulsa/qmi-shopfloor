@@ -1519,20 +1519,56 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
   };
   window.fbLogin = async function(username, password) {
     const hash = simpleHash(password);
-    username = username.toLowerCase().trim();
-    let snap = await getDocs(query(collection(db, 'qmiUsers'), where('username', '==', username)));
-    // If not found lowercase, try original case (fixes existing accounts)
-    if (snap.empty) {
-      snap = await getDocs(query(collection(db, 'qmiUsers'), where('username', '==', username.charAt(0).toUpperCase() + username.slice(1))));
+    const uLower = username.toLowerCase().trim();
+
+    // Try all possible stored formats
+    let userDoc = null;
+    const attempts = [
+      uLower,
+      uLower.charAt(0).toUpperCase() + uLower.slice(1),
+      username.trim()
+    ];
+
+    for (var i = 0; i < attempts.length; i++) {
+      const snap = await getDocs(query(collection(db, 'qmiUsers'), where('username', '==', attempts[i])));
+      if (!snap.empty) { userDoc = snap.docs[0]; break; }
     }
-    if (snap.empty) return { error: 'Username not found.' };
-    const userDoc = snap.docs[0];
+
+    // Last resort: scan all approved users by name match
+    if (!userDoc) {
+      const allSnap = await getDocs(collection(db, 'qmiUsers'));
+      allSnap.forEach(d => {
+        if (!userDoc) {
+          const u = d.data();
+          const storedUser = (u.username || '').toLowerCase().trim();
+          if (storedUser === uLower) userDoc = d;
+        }
+      });
+    }
+
+    if (!userDoc) return { error: 'Username not found. Check spelling or request access.' };
+
     const data = userDoc.data();
+
+    // Fix: if stored username is different case, normalize it
+    if (!data.username || data.username.toLowerCase() !== uLower) {
+      try { await updateDoc(doc(db, 'qmiUsers', userDoc.id), { username: uLower }); } catch(e){}
+    }
+
     if (data.passwordHash !== hash) return { error: 'Incorrect password.' };
-    if (data.status === 'pending') return { pending: true, name: data.name };
+    if (data.status === 'pending')  return { pending: true, name: data.name };
     if (data.status === 'rejected') return { rejected: true };
+
     const userRole = data.role || 'machinist';
-    return { success: true, user: { username: data.username, name: data.name, role: userRole, id: userDoc.id, position: data.position || '', pushoverKey: data.pushoverKey || '', isManager: data.isManager || false } };
+    return { success: true, user: {
+      id:          userDoc.id,
+      username:    data.username || uLower,
+      name:        data.name || username,
+      role:        userRole,
+      position:    data.position    || '',
+      pushoverKey: data.pushoverKey || '',
+      isManager:   data.isManager   || false
+    }};
   };
   window.fbValidateUser = async function(username) {
     const snap = await getDocs(query(collection(db, 'qmiUsers'), where('username', '==', username)));
@@ -2297,7 +2333,16 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) { loginSuccess({ username: ADMIN_USERNAME, name: 'Admin', role: 'admin' }, remember); return; }
     setMsg('loginMsg', 'Signing in...', '');
     try {
-      if (!window.fbLogin) { setMsg('loginMsg', 'App still loading, please try again.', 'error'); return; }
+      // Wait up to 5s for Firebase to be ready
+      if (!window.fbLogin) {
+        setMsg('loginMsg', 'Connecting...', 'pending');
+        let waited = 0;
+        while (!window.fbLogin && waited < 5000) {
+          await new Promise(r => setTimeout(r, 300));
+          waited += 300;
+        }
+        if (!window.fbLogin) { setMsg('loginMsg', 'Connection failed. Check your internet and try again.', 'error'); return; }
+      }
       const result = await window.fbLogin(username, password);
       if (result.error)    { setMsg('loginMsg', result.error, 'error'); return; }
       if (result.pending)  { setMsg('loginMsg', 'Your account is awaiting admin approval.', 'pending'); return; }
@@ -2316,7 +2361,15 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     if (username === ADMIN_USERNAME) { setMsg('signupMsg', 'That username is reserved.', 'error'); return; }
     setMsg('signupMsg', 'Submitting...', '');
     try {
-      if (!window.fbSignup) { setMsg('signupMsg', 'App still loading, please try again.', 'error'); return; }
+      if (!window.fbSignup) {
+        setMsg('signupMsg', 'Connecting...', 'pending');
+        let waited = 0;
+        while (!window.fbSignup && waited < 5000) {
+          await new Promise(r => setTimeout(r, 300));
+          waited += 300;
+        }
+        if (!window.fbSignup) { setMsg('signupMsg', 'Connection failed. Try again.', 'error'); return; }
+      }
       const result = await window.fbSignup(name, username, password);
       if (result.error) { setMsg('signupMsg', result.error, 'error'); return; }
       setMsg('signupMsg', '✅ Request submitted! An admin will approve your access shortly.', 'success');
@@ -2617,7 +2670,9 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     var uname = u ? (u.name || u.username) : 'User';
     await window.fbUpdateUserStatus(id, status);
     if (status === 'approved') {
-      showToast('green', '✅ ' + uname + ' approved!', 'They can now log in to QMI.');
+      showToast('green', '✅ ' + uname + ' approved!', 'They can now sign in to QMI.');
+      // Send Pushover to admin group so team knows
+      safePushover('✅ QMI Access Granted', uname + ' has been approved and can now log in.', 'pushover', 0);
     } else if (status === 'rejected') {
       showToast('red', '❌ ' + uname + ' rejected', 'Access denied.');
     }
