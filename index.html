@@ -38,8 +38,9 @@ header { background: linear-gradient(135deg, #001833 0%, #002a5c 100%); border-b
 .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
 
 /* NAV TABS */
-.nav-tabs { background: #000d2e; border-bottom: 2px solid #1a4a8c; display: flex; padding: 0 20px; gap: 2px; position: sticky; top: 0; z-index: 200; }
-.nav-tab { padding: 7px 16px; font-family: ‘Bebas Neue’, sans-serif; font-size: 17px; letter-spacing: 2.5px; color: #475569; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.25s ease; display: flex; align-items: center; gap: 8px; border-radius: 8px 8px 0 0; }
+.nav-tabs { background: #000d2e; border-bottom: 2px solid #1a4a8c; display: flex; padding: 0; gap: 0; position: sticky; top: 0; z-index: 200; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.nav-tabs::-webkit-scrollbar { display: none; }
+.nav-tab { padding: 10px 14px; font-family: ‘Bebas Neue’, sans-serif; font-size: 15px; letter-spacing: 2px; color: #475569; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.25s ease; display: flex; align-items: center; gap: 6px; border-radius: 8px 8px 0 0; white-space: nowrap; flex-shrink: 0; }
 .nav-tab:hover { color: #94a3b8; background: rgba(255,255,255,0.04); }
 .nav-tab.active { color: #f5c500; border-bottom-color: #f5c500; background: rgba(245,158,11,0.12); box-shadow: 0 0 18px rgba(245,158,11,0.35), inset 0 1px 0 rgba(245,158,11,0.3); text-shadow: 0 0 12px rgba(245,158,11,0.8); }
 .nav-tab .tab-badge { background: #ef4444; color: white; font-size: 10px; font-weight: 700; border-radius: 999px; padding: 1px 6px; font-family: ‘Barlow’, sans-serif; letter-spacing: 0; }
@@ -514,69 +515,155 @@ header { background: linear-gradient(135deg, #001833 0%, #002a5c 100%); border-b
 .sched-empty-card { text-align: center; padding: 20px; color: #334155; font-size: 13px; font-family: Barlow, sans-serif; }
 .sched-empty-card .e-icon { font-size: 28px; margin-bottom: 8px; }
 
-/* TV FULLSCREEN MODE */
-.sched-tv-mode { position:fixed;inset:0;z-index:9000;background:#000711;display:none;flex-direction:column;overflow:hidden; }
+/* ══════ TV DISPLAY — BROADCAST QUALITY ══════ */
+.sched-tv-mode { position:fixed;inset:0;z-index:9000;background:#00050f;display:none;flex-direction:column;overflow:hidden;font-family:‘Barlow’,sans-serif; }
 .sched-tv-mode.open { display:flex; }
 
-/* Header bar */
-.sched-tv-header { background:linear-gradient(135deg,#001833,#002a5c);padding:10px 28px;display:flex;align-items:center;justify-content:space-between;border-bottom:4px solid #f5c500;flex-shrink:0;gap:16px;flex-wrap:wrap; }
-.sched-tv-header-left { display:flex;flex-direction:column; }
-.sched-tv-title { font-family:‘Bebas Neue’,sans-serif;font-size:30px;letter-spacing:5px;color:#f5c500;line-height:1; }
-.sched-tv-date-str { font-size:12px;color:#64748b;letter-spacing:1px;margin-top:2px; }
-.sched-tv-header-right { display:flex;align-items:center;gap:14px;flex-wrap:wrap; }
-.sched-tv-clock { font-family:‘Bebas Neue’,sans-serif;font-size:34px;letter-spacing:4px;color:#f0f4f8; }
+/* TOP BAR */
+.sched-tv-header {
+background:linear-gradient(90deg,#001228 0%,#002050 50%,#001228 100%);
+padding:0 20px;
+height:70px;
+display:flex;
+align-items:center;
+justify-content:space-between;
+border-bottom:3px solid #f5c500;
+flex-shrink:0;
+position:relative;
+box-shadow:0 4px 30px rgba(0,0,0,0.6);
+gap:12px;
+}
+.sched-tv-header::after {
+content:’’;
+position:absolute;
+bottom:-3px;left:0;right:0;
+height:1px;
+background:linear-gradient(90deg,transparent,rgba(245,197,0,0.4),transparent);
+}
+.sched-tv-header-left { display:flex;align-items:center;gap:18px; }
+.sched-tv-logo-dot { width:10px;height:36px;background:#f5c500;border-radius:2px;box-shadow:0 0 12px rgba(245,197,0,0.7); }
+.sched-tv-title-wrap { display:flex;flex-direction:column;line-height:1; }
+.sched-tv-company { font-size:10px;letter-spacing:3px;color:#64748b;text-transform:uppercase;margin-bottom:1px; }
+.sched-tv-title { font-family:‘Bebas Neue’,sans-serif;font-size:26px;letter-spacing:4px;color:#f5c500; }
+.sched-tv-header-right { display:flex;align-items:center;gap:20px; }
+.sched-tv-clock-wrap { text-align:right; }
+.sched-tv-clock { font-family:‘Bebas Neue’,sans-serif;font-size:36px;letter-spacing:2px;color:#ffffff;line-height:1;text-shadow:0 0 20px rgba(255,255,255,0.3);white-space:nowrap; }
+.sched-tv-date-str { font-size:11px;color:#64748b;letter-spacing:1.5px;text-transform:uppercase;text-align:right;margin-top:1px; }
+.sched-tv-dots { display:flex;gap:8px;align-items:center; }
+.sched-tv-dot { width:10px;height:10px;border-radius:50%;background:#1a3a6c;transition:all 0.4s;cursor:pointer; }
+.sched-tv-dot.active { background:#f5c500;box-shadow:0 0 10px rgba(245,197,0,0.8);transform:scale(1.25); }
+.sched-tv-dot.hot { background:#ef4444;box-shadow:0 0 8px rgba(239,68,68,0.7); }
 
-/* Controls bar */
-.sched-tv-controls { background:#000d25;padding:8px 28px;display:flex;align-items:center;gap:16px;border-bottom:1px solid #1a4a8c;flex-shrink:0;flex-wrap:wrap; }
-.sched-tv-ctrl-label { font-family:‘Bebas Neue’,sans-serif;font-size:13px;letter-spacing:2px;color:#64748b; }
-.sched-tv-ctrl-btn { background:rgba(255,255,255,0.06);border:1px solid #1a4a8c;color:#f0f4f8;border-radius:8px;padding:6px 14px;font-family:‘Bebas Neue’,sans-serif;font-size:14px;letter-spacing:1px;cursor:pointer;transition:all 0.15s; }
-.sched-tv-ctrl-btn:hover { background:rgba(245,197,0,0.15);border-color:#f5c500;color:#f5c500; }
-.sched-tv-ctrl-btn.active { background:rgba(245,197,0,0.2);border-color:#f5c500;color:#f5c500; }
-.sched-tv-speed-range { -webkit-appearance:none;width:120px;height:6px;border-radius:3px;background:#1a4a8c;outline:none;cursor:pointer; }
-.sched-tv-speed-range::-webkit-slider-thumb { -webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#f5c500;cursor:pointer; }
-.sched-tv-speed-val { font-family:‘Bebas Neue’,sans-serif;font-size:14px;color:#f5c500;min-width:28px; }
-.sched-tv-prog-bar { flex:1;height:4px;background:#1a4a8c;border-radius:2px;min-width:80px;overflow:hidden;position:relative; }
-.sched-tv-prog-fill { height:100%;background:#f5c500;border-radius:2px;transition:width 0.1s linear;width:0%; }
-.sched-tv-pause-btn { background:rgba(245,197,0,0.12);border:1px solid rgba(245,197,0,0.4);color:#f5c500;border-radius:8px;padding:6px 14px;font-family:‘Bebas Neue’,sans-serif;font-size:14px;letter-spacing:1px;cursor:pointer;transition:all 0.15s; }
-.sched-tv-exit { background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.5);color:#f87171;border-radius:8px;padding:6px 14px;font-family:‘Bebas Neue’,sans-serif;font-size:14px;letter-spacing:2px;cursor:pointer; }
-.sched-tv-exit:hover { background:rgba(239,68,68,0.3); }
+/* CONTROLS BAR */
+.sched-tv-controls {
+background:#000d1f;
+padding:6px 20px;
+display:flex;
+align-items:center;
+gap:8px;
+border-bottom:1px solid rgba(26,74,140,0.5);
+flex-shrink:0;
+flex-wrap:wrap;
+row-gap:4px;
+}
+.sched-tv-ctrl-label { font-family:‘Bebas Neue’,sans-serif;font-size:12px;letter-spacing:2px;color:#475569; }
+.sched-tv-ctrl-btn { background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:#94a3b8;border-radius:6px;padding:5px 12px;font-family:‘Bebas Neue’,sans-serif;font-size:13px;letter-spacing:1px;cursor:pointer;transition:all 0.15s; }
+.sched-tv-ctrl-btn.active { background:rgba(245,197,0,0.15);border-color:#f5c500;color:#f5c500;box-shadow:0 0 10px rgba(245,197,0,0.2); }
+.sched-tv-ctrl-btn:hover { border-color:#f5c500;color:#f5c500; }
+.sched-tv-speed-range { -webkit-appearance:none;width:100px;height:4px;border-radius:2px;background:#1a4a8c;outline:none;cursor:pointer; }
+.sched-tv-speed-range::-webkit-slider-thumb { -webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#f5c500;cursor:pointer;box-shadow:0 0 6px rgba(245,197,0,0.5); }
+.sched-tv-speed-val { font-family:‘Bebas Neue’,sans-serif;font-size:13px;color:#f5c500;min-width:24px; }
+.sched-tv-prog-bar { flex:1;height:3px;background:#1a3060;border-radius:2px;min-width:60px;overflow:hidden; }
+.sched-tv-prog-fill { height:100%;background:linear-gradient(90deg,#f5c500,#ffd633);border-radius:2px;transition:width 0.1s linear;width:0%; }
+.sched-tv-pause-btn { background:rgba(245,197,0,0.08);border:1px solid rgba(245,197,0,0.3);color:#f5c500;border-radius:6px;padding:5px 12px;font-family:‘Bebas Neue’,sans-serif;font-size:13px;letter-spacing:1px;cursor:pointer; }
+.sched-tv-exit { background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.4);color:#f87171;border-radius:6px;padding:5px 12px;font-family:‘Bebas Neue’,sans-serif;font-size:13px;letter-spacing:2px;cursor:pointer; }
 
-/* Slide area */
-.sched-tv-stage { flex:1;overflow:hidden;position:relative; }
-.sched-tv-slide { position:absolute;inset:0;padding:20px 28px;overflow-y:auto;opacity:0;transition:opacity 0.5s ease;pointer-events:none; }
+/* SLIDE STAGE */
+.sched-tv-stage { flex:1;overflow:hidden;position:relative;background:#00050f; }
+.sched-tv-slide { position:absolute;inset:0;padding:14px 16px 12px;overflow-y:auto;opacity:0;transition:opacity 0.6s ease;pointer-events:none; }
 .sched-tv-slide.active { opacity:1;pointer-events:auto; }
 
-/* Slide header */
-.sched-tv-slide-title { font-family:‘Bebas Neue’,sans-serif;font-size:22px;letter-spacing:4px;color:#94a3b8;margin-bottom:16px;display:flex;align-items:center;gap:12px; }
-.sched-tv-slide-title span { background:rgba(245,197,0,0.12);border:1px solid rgba(245,197,0,0.3);color:#f5c500;border-radius:6px;padding:2px 12px;font-size:16px; }
+/* CELL/SECTION HEADER in slide */
+.sched-tv-slide-title {
+display:flex;align-items:center;gap:14px;
+margin-bottom:14px;
+padding-bottom:10px;
+border-bottom:1px solid rgba(245,197,0,0.15);
+}
+.sched-tv-slide-icon { font-size:20px; }
+.sched-tv-slide-name { font-family:‘Bebas Neue’,sans-serif;font-size:26px;letter-spacing:5px;color:#f5c500; }
+.sched-tv-slide-badge {
+background:rgba(245,197,0,0.1);
+border:1px solid rgba(245,197,0,0.25);
+color:#f5c500;
+border-radius:6px;
+padding:2px 10px;
+font-family:‘Bebas Neue’,sans-serif;
+font-size:14px;
+letter-spacing:1px;
+margin-left:auto;
+}
 
-/* Cards grid inside slide */
-.sched-tv-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px; }
+/* MACHINE CARDS GRID */
+.sched-tv-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px; }
 
-/* Cards */
-.sched-tv-card { background:linear-gradient(175deg,#001020,#001830);border-radius:14px;border:1px solid #1a4a8c;overflow:hidden; }
-.sched-tv-card.has-hot { border-color:#ef4444;box-shadow:0 0 28px rgba(239,68,68,0.3); }
-.sched-tv-card-header { padding:10px 16px;background:rgba(245,197,0,0.06);border-bottom:1px solid #1a4a8c;display:flex;align-items:center;justify-content:space-between; }
-.sched-tv-machine { font-family:‘Bebas Neue’,sans-serif;font-size:24px;letter-spacing:2px;color:#f5c500; }
-.sched-tv-cell-lbl { font-size:11px;color:#475569;letter-spacing:2px;text-transform:uppercase; }
+/* INDIVIDUAL MACHINE CARD */
+.sched-tv-card {
+background:linear-gradient(145deg,#000e22,#001530);
+border-radius:12px;
+border:1px solid rgba(26,74,140,0.6);
+overflow:hidden;
+transition:box-shadow 0.3s;
+}
+.sched-tv-card.has-hot {
+border-color:#ef4444;
+box-shadow:0 0 24px rgba(239,68,68,0.25),inset 0 0 40px rgba(239,68,68,0.03);
+animation:pulse-card 2s ease-in-out infinite;
+}
+@keyframes pulse-card { 0%,100%{box-shadow:0 0 24px rgba(239,68,68,0.25);} 50%{box-shadow:0 0 40px rgba(239,68,68,0.45);} }
+
+/* CARD HEADER */
+.sched-tv-card-header {
+padding:10px 16px 9px;
+background:linear-gradient(90deg,rgba(245,197,0,0.07),transparent);
+border-bottom:1px solid rgba(26,74,140,0.5);
+display:flex;
+align-items:center;
+justify-content:space-between;
+}
+.sched-tv-machine { font-family:‘Bebas Neue’,sans-serif;font-size:26px;letter-spacing:2px;color:#f5c500;line-height:1; }
+.sched-tv-cell-lbl { font-size:10px;color:#475569;letter-spacing:2.5px;text-transform:uppercase;margin-top:1px; }
+
+/* JOB ROWS */
 .sched-tv-job { padding:10px 16px;border-bottom:1px solid rgba(26,74,140,0.3); }
 .sched-tv-job:last-child { border-bottom:none; }
-.sched-tv-job-label { font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px; }
+.sched-tv-job-label {
+display:flex;align-items:center;gap:6px;
+font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;
+margin-bottom:5px;
+}
+.sched-tv-job-label::before { content:’’;width:6px;height:6px;border-radius:50%;flex-shrink:0; }
 .sched-tv-job-label.current { color:#22c55e; }
-.sched-tv-job-label.hot     { color:#ef4444; }
-.sched-tv-job-label.next    { color:#3b82f6; }
-.sched-tv-wo   { font-family:‘Bebas Neue’,sans-serif;font-size:22px;letter-spacing:1px;color:#f0f4f8; }
-.sched-tv-part { font-size:14px;color:#94a3b8;margin-top:2px; }
-.sched-tv-meta { display:flex;gap:14px;margin-top:5px;flex-wrap:wrap; }
-.sched-tv-op   { font-size:13px;color:#64748b; }
-.sched-tv-eta  { font-size:13px;color:#f5c500;font-weight:600; }
-.sched-tv-hot-badge { background:#ef4444;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;letter-spacing:1px;animation:blink-red 0.7s step-end infinite; }
-
-/* Dot indicator */
-.sched-tv-dots { display:flex;gap:6px;align-items:center; }
-.sched-tv-dot  { width:8px;height:8px;border-radius:50%;background:#1a4a8c;transition:all 0.3s; }
-.sched-tv-dot.active { background:#f5c500;transform:scale(1.3); }
-.sched-tv-dot.hot    { background:#ef4444; }
+.sched-tv-job-label.current::before { background:#22c55e;box-shadow:0 0 6px #22c55e; }
+.sched-tv-job-label.hot { color:#ef4444; }
+.sched-tv-job-label.hot::before { background:#ef4444;box-shadow:0 0 8px #ef4444;animation:blink-red 0.6s step-end infinite; }
+.sched-tv-job-label.next { color:#3b82f6; }
+.sched-tv-job-label.next::before { background:#3b82f6;box-shadow:0 0 5px #3b82f6; }
+.sched-tv-wo { font-family:‘Bebas Neue’,sans-serif;font-size:24px;letter-spacing:1px;color:#ffffff;line-height:1.1; }
+.sched-tv-part { font-size:13px;color:#94a3b8;margin-top:3px;letter-spacing:0.3px; }
+.sched-tv-meta { display:flex;gap:16px;margin-top:7px;flex-wrap:wrap;align-items:center; }
+.sched-tv-op { font-size:12px;color:#64748b;display:flex;align-items:center;gap:4px; }
+.sched-tv-op::before { content:‘👤’;font-size:11px; }
+.sched-tv-eta { font-size:12px;color:#f5c500;font-weight:700;display:flex;align-items:center;gap:4px;letter-spacing:0.5px; }
+.sched-tv-eta::before { content:‘⏱’;font-size:11px; }
+.sched-tv-hot-badge {
+background:linear-gradient(135deg,#7c0000,#ef4444);
+color:#fff;font-size:10px;font-weight:700;
+padding:2px 10px;border-radius:999px;letter-spacing:1.5px;
+animation:blink-red 0.6s step-end infinite;
+box-shadow:0 0 10px rgba(239,68,68,0.5);
+}
+.sched-tv-not-set { color:#1e3a6c;font-size:12px;letter-spacing:1px;font-style:italic;padding:2px 0; }
 
 /* SCHEDULE MODAL */
 .sched-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 5000; display: none; align-items: center; justify-content: center; padding: 20px; }
@@ -672,8 +759,8 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
 .status-label { display: none !important; }
 .admin-btn { padding: 3px 7px !important; font-size: 11px !important; }
 .logout-btn { padding: 3px 7px !important; font-size: 11px !important; }
-.nav-tab { padding: 4px 6px !important; font-size: 10px !important; letter-spacing: 0.5px !important; gap: 2px !important; flex-direction: column !important; align-items: center !important; line-height: 1.1 !important; white-space: nowrap !important; }
-.nav-tabs { padding: 0 2px !important; gap: 0 !important; }
+.nav-tab { padding: 9px 12px !important; font-size: 13px !important; letter-spacing: 1.5px !important; gap: 5px !important; flex-direction: row !important; align-items: center !important; white-space: nowrap !important; flex-shrink: 0 !important; }
+.nav-tabs { padding: 0 !important; gap: 0 !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
 .floor-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 8px; gap: 6px; }
 .machine-name { font-size: 13px !important; letter-spacing: 0.5px !important; }
 .cell-title { font-size: 10px !important; letter-spacing: 1px !important; }
@@ -1445,7 +1532,7 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     if (data.status === 'pending') return { pending: true, name: data.name };
     if (data.status === 'rejected') return { rejected: true };
     const userRole = data.role || 'machinist';
-    return { success: true, user: { username: data.username, name: data.name, role: userRole, id: userDoc.id } };
+    return { success: true, user: { username: data.username, name: data.name, role: userRole, id: userDoc.id, position: data.position || '', pushoverKey: data.pushoverKey || '', isManager: data.isManager || false } };
   };
   window.fbValidateUser = async function(username) {
     const snap = await getDocs(query(collection(db, 'qmiUsers'), where('username', '==', username)));
@@ -2267,41 +2354,42 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     var posLine = user.position ? '<br><span style="font-size:10px;color:#94a3b8;font-weight:400;letter-spacing:0.5px;">' + escHtml(user.position) + '</span>' : '';
     greetingName.innerHTML = roleEmoji + ' <strong>' + escHtml(user.name) + '</strong>' + posLine;
 
-    if (user.role === 'admin') {
-      document.getElementById('adminBtn').classList.add('visible');
+    var role = user.role || 'machinist';
+    var isManagementRole = ['admin','plant_manager','manager'].includes(role);
+    var isAdmin          = role === 'admin';
+    var isPlantManager   = role === 'plant_manager';
+
+    // Show/hide tabs based on role
+    var mgmtTab    = document.getElementById('tab-mgmt');
+    var schedTab   = document.getElementById('tab-schedule');
+    var schedAddBtn = document.getElementById('schedAddBtn');
+    var adminBtn   = document.getElementById('adminBtn');
+    var switchBtn  = document.getElementById('shopSwitchBtn');
+
+    if (mgmtTab)    mgmtTab.style.display    = isManagementRole ? '' : 'none';
+    if (schedTab)   schedTab.style.display   = isManagementRole ? '' : 'none';
+    if (schedAddBtn) schedAddBtn.style.display = isManagementRole ? '' : 'none';
+
+    if (isAdmin || isPlantManager) {
+      if (adminBtn) adminBtn.classList.add('visible');
+      if (switchBtn && isAdmin) switchBtn.classList.add('visible');
+    }
+
+    if (isAdmin) {
       window._isAdmin = true;
       listenToUsers();
-      var mgmtTab = document.getElementById('tab-mgmt');
-      if (mgmtTab) mgmtTab.style.display = '';
-      var schedTab = document.getElementById('tab-schedule');
-      if (schedTab) schedTab.style.display = '';
-      var schedAddAdmin = document.getElementById('schedAddBtn');
-      if (schedAddAdmin) schedAddAdmin.style.display = '';
-      var switchBtn = document.getElementById('shopSwitchBtn');
-      if (switchBtn) switchBtn.classList.add('visible');
-    } else if (user.role === 'plant_manager') {
-      document.getElementById('adminBtn').classList.add('visible');
+    } else if (isPlantManager) {
       window._isPlantManager = true;
       listenToUsers();
-      var pmMgmtTab = document.getElementById('tab-mgmt');
-      if (pmMgmtTab) pmMgmtTab.style.display = '';
-      var pmSchedTab = document.getElementById('tab-schedule');
-      if (pmSchedTab) pmSchedTab.style.display = '';
-      var pmAddBtn = document.getElementById('schedAddBtn');
-      if (pmAddBtn) pmAddBtn.style.display = '';
-    } else if (user.role === 'manager') {
+    } else if (role === 'manager') {
       listenToUsers();
-      var mgmtTab = document.getElementById('tab-mgmt');
-      if (mgmtTab) mgmtTab.style.display = '';
-      var schedTab = document.getElementById('tab-schedule');
-      if (schedTab) schedTab.style.display = '';
-      var schedAdd3 = document.getElementById('schedAddBtn');
-      if (schedAdd3) schedAdd3.style.display = '';
     } else {
-      // machinist — check legacy isManager flag as fallback
-      if (window.checkManagerAccess) {
-        window.checkManagerAccess(user.username || user.name).then(function(isManager) {
-          if (isManager) { var mgmtTab = document.getElementById('tab-mgmt'); if (mgmtTab) mgmtTab.style.display = ''; }
+      // Fallback: check legacy isManager flag
+      if (user.isManager) {
+        if (mgmtTab) mgmtTab.style.display = '';
+      } else if (window.checkManagerAccess) {
+        window.checkManagerAccess(user.username || user.name).then(function(ok) {
+          if (ok && mgmtTab) mgmtTab.style.display = '';
         });
       }
     }
@@ -2310,6 +2398,9 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
 
   function doLogout() {
     currentUser = null;
+    window._isAdmin = false;
+    window._isPlantManager = false;
+    window._currentRole = 'machinist';
     localStorage.removeItem('qmiUser');
     sessionStorage.removeItem('qmiUser');
     document.getElementById('authOverlay').classList.remove('hidden');
@@ -2317,8 +2408,12 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     document.getElementById('adminBtn').classList.remove('visible');
     var sb = document.getElementById('shopSwitchBtn');
     if (sb) sb.classList.remove('visible');
+    var mgmtTab = document.getElementById('tab-mgmt');
+    if (mgmtTab) mgmtTab.style.display = 'none';
     var schedTab = document.getElementById('tab-schedule');
     if (schedTab) schedTab.style.display = 'none';
+    var schedAddBtn = document.getElementById('schedAddBtn');
+    if (schedAddBtn) schedAddBtn.style.display = 'none';
     document.getElementById('loginUser').value = '';
     document.getElementById('loginPass').value = '';
     setMsg('loginMsg', '', '');
@@ -3344,7 +3439,16 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
   // ── TV Clock ──
   function updateTVClock() {
     var el = document.getElementById('tvClock');
-    if (el) el.textContent = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    if (!el) return;
+    var now = new Date();
+    var h = now.getHours();
+    var m = now.getMinutes();
+    var s = now.getSeconds();
+    var ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12; if (h === 0) h = 12;
+    el.textContent = h + ':' + (m < 10 ? '0' : '') + m + ' ' + ampm;
+    // Pulse the colon every second
+    el.style.opacity = s % 2 === 0 ? '1' : '0.85';
   }
   updateTVClock();
   setInterval(updateTVClock, 1000);
@@ -3412,7 +3516,8 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
     } else {
       var emp = document.createElement('div');
       emp.className = tvMode ? 'sched-tv-job' : 'sched-job-row';
-      emp.innerHTML = '<div class="' + (tvMode?'sched-tv-job-label current':'sched-job-label current') + '">🟢 CURRENT JOB</div><div style="color:#334155;font-size:13px;font-family:Barlow,sans-serif;">Not set</div>';
+      emp.innerHTML = '<div class="' + (tvMode?'sched-tv-job-label current':'sched-job-label current') + '">CURRENT JOB</div>' +
+        (tvMode ? '<div class="sched-tv-not-set">— No job scheduled —</div>' : '<div style="color:#334155;font-size:13px;font-family:Barlow,sans-serif;">Not set</div>');
       card.appendChild(emp);
     }
 
@@ -3582,7 +3687,10 @@ header { padding: 3px 8px !important; min-height: 0 !important; flex-wrap: nowra
         var title = document.createElement('div');
         title.className = 'sched-tv-slide-title';
         var icon = slide.hot ? '🔴' : (slide.type==='cell' ? '🏭' : slide.type==='priority' && slide.label==='HOT JOBS' ? '🔴' : '📋');
-        title.innerHTML = icon + ' ' + slide.label + ' <span>' + (TV.curSlide+1 === idx+1 ? idx+1 : idx+1) + ' of ' + TV.slides.length + '</span>';
+        title.innerHTML =
+          '<span class="sched-tv-slide-icon">' + icon + '</span>' +
+          '<span class="sched-tv-slide-name">' + slide.label + '</span>' +
+          '<span class="sched-tv-slide-badge">' + (idx+1) + ' / ' + TV.slides.length + '</span>';
         div.appendChild(title);
 
         // Cards grid
